@@ -1,0 +1,2640 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Encapsulation Calculator – byte-exact MTU, MSS and frame size for GRE, VXLAN, Geneve, IPsec ESP, WireGuard, MPLS, SRv6 and PPPoE stacks. Runs offline.">
+<meta name="color-scheme" content="dark light">
+<title>Encapsulation Calculator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='5' rx='1.5' fill='%234c8dff'/%3E%3Crect x='6' y='13' width='20' height='5' rx='1.5' fill='%23ff6b9a'/%3E%3Crect x='9' y='21' width='14' height='5' rx='1.5' fill='%2322c3a6'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #0b0f17;
+  --bg-grid: rgba(120, 150, 200, 0.06);
+  --panel: #111723;
+  --panel-2: #161e2d;
+  --line: #243049;
+  --line-2: #2f3d5c;
+  --text: #e6ecf5;
+  --muted: #9aa8bf;
+  --accent: #3ee0cf;
+  --accent-ink: #04201d;
+  --focus: #7cc4ff;
+  --err: #ff6b6b;
+  --warn: #ffc24b;
+  --info: #7cb7ff;
+  --ok: #4ade80;
+  --fill-l: 66%;
+  --fill-s: 72%;
+  --ink-on-fill: #0a0f1a;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 12px;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.34, 1.4, .64, 1);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f4f6fa;
+  --bg-grid: rgba(40, 70, 120, 0.06);
+  --panel: #ffffff;
+  --panel-2: #f1f4f9;
+  --line: #d7deea;
+  --line-2: #c3cddd;
+  --text: #121a2a;
+  --muted: #4d5b73;
+  --accent: #0b7f75;
+  --accent-ink: #ffffff;
+  --focus: #1f6feb;
+  --err: #c62828;
+  --warn: #8a5a00;
+  --info: #1f5fbf;
+  --ok: #1b7f3b;
+  --fill-l: 74%;
+  --fill-s: 70%;
+  --shadow: 0 10px 30px rgba(20, 30, 60, 0.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    --bg: #f4f6fa; --bg-grid: rgba(40, 70, 120, 0.06); --panel: #ffffff; --panel-2: #f1f4f9;
+    --line: #d7deea; --line-2: #c3cddd; --text: #121a2a; --muted: #4d5b73; --accent: #0b7f75;
+    --accent-ink: #ffffff; --focus: #1f6feb; --err: #c62828; --warn: #8a5a00; --info: #1f5fbf; --ok: #1b7f3b;
+    --fill-l: 74%; --fill-s: 70%; --shadow: 0 10px 30px rgba(20, 30, 60, 0.12); color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--text);
+  font: 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+h3.sub { font-size: 12px; font-weight: 500; color: var(--muted); margin: 14px 0 6px; }
+a { color: var(--accent); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--accent); color: var(--accent-ink); padding: 8px 12px; border-radius: 8px; z-index: 50; }
+.skip:focus { left: 8px; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------------------------------------------------------------- top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 24px; border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo { width: 34px; height: 34px; stroke: none; flex: none; }
+.logo rect:nth-child(1) { fill: hsl(215 80% 62%); }
+.logo rect:nth-child(2) { fill: hsl(335 85% 66%); }
+.logo rect:nth-child(3) { fill: hsl(165 70% 48%); }
+h1 { font-size: 18px; }
+.tagline { margin: 0; font-size: 12.5px; color: var(--muted); }
+.top-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2);
+  background: var(--panel-2); border-radius: 9px; padding: 7px 12px; cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: scale(.97); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+.btn.icon { padding: 7px; }
+:root[data-theme="dark"] .i-moon, :root[data-theme="light"] .i-sun { display: none; }
+:root[data-theme="auto"] .i-moon { display: none; }
+@media (prefers-color-scheme: light) { :root[data-theme="auto"] .i-sun { display: none; } :root[data-theme="auto"] .i-moon { display: inline; } }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 9px; padding: 2px; background: var(--panel-2); }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+/* ---------------------------------------------------------------- layout */
+.layout {
+  display: grid; gap: 18px; padding: 18px 24px 32px;
+  grid-template-columns: 270px minmax(300px, 360px) minmax(0, 1fr);
+  align-items: start; max-width: 1640px; margin: 0 auto;
+}
+.col { display: grid; gap: 18px; min-width: 0; }
+.col-stack { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; scrollbar-width: thin; }
+.col-results:focus { outline: none; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.hint { color: var(--muted); font-size: 12.5px; margin: 6px 0 10px; }
+
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 250px minmax(0, 1fr); }
+  .col-results { grid-column: 1 / -1; }
+  .col-build, .col-stack { position: static; max-height: none; }
+}
+@media (max-width: 720px) {
+  .topbar { padding: 10px 16px; gap: 10px; }
+  .logo { width: 26px; height: 26px; }
+  .top-actions { gap: 6px; }
+  .seg button { padding: 5px 8px; }
+  .tagline { display: none; }
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 96px; gap: 14px; }
+  .col { gap: 14px; }
+  .panel { padding: 14px; }
+  #btn-share span { display: none; }
+  .topbar { position: static; }
+  h1 { font-size: 15px; line-height: 1.15; max-width: 7.5em; }
+  .col-build, .col-stack { display: contents; }
+  .panel-examples { order: 1; }
+  .stack-panel { order: 2; }
+  .panel-palette { order: 3; }
+  .col-results { order: 4; }
+  .chip { padding: 6px 11px 6px 8px; }
+}
+
+/* ---------------------------------------------------------------- presets & palette */
+.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.preset {
+  text-align: left; border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px;
+  padding: 8px 10px; cursor: pointer; transition: border-color .15s, transform .15s var(--ease);
+}
+.preset:hover { border-color: var(--accent); transform: translateX(2px); }
+.preset[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.preset strong { display: block; font-size: 12.5px; line-height: 1.3; }
+.preset small { color: var(--muted); font-size: 11.5px; font-family: var(--mono); }
+.preset .desc { display: none; }
+.preset .dots { display: flex; gap: 2px; margin-top: 5px; }
+.preset .dots i { height: 4px; border-radius: 2px; background: hsl(var(--h) var(--fill-s) var(--fill-l)); }
+@media (max-width: 720px) {
+  .presets { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 46%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .preset { scroll-snap-align: start; }
+}
+
+.palette-group { margin-top: 8px; }
+.palette-group h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 6px; }
+.palette-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  --h: 210;
+  display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line-2);
+  background: var(--panel-2); border-radius: 999px; padding: 5px 11px 5px 7px; cursor: grab;
+  font-size: 13px; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: border-color .15s, transform .15s var(--ease), background .15s;
+}
+.chip:hover { border-color: hsl(var(--h) 70% 55%); transform: translateY(-1px); }
+.chip:active { cursor: grabbing; }
+.chip .sw { width: 12px; height: 12px; border-radius: 4px; background: hsl(var(--h) var(--fill-s) var(--fill-l)); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.chip .sz { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+.chip.armed { transform: scale(1.06); border-color: hsl(var(--h) 70% 55%); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button {
+  border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 8px; padding: 4px 10px;
+  font-family: var(--mono); font-size: 13px; cursor: pointer;
+}
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+
+/* ---------------------------------------------------------------- stack */
+.wire-label { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.wire-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+.stack { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; min-height: 8px; position: relative; }
+.stack-panel { position: relative; }
+.stack-empty {
+  border: 1.5px dashed var(--line-2); border-radius: 10px; padding: 26px 14px; text-align: center; color: var(--muted); font-size: 13px;
+}
+.stack-panel.drop-active .stack-empty, .stack-panel.drop-active .stack { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 10px; }
+.card {
+  --h: 210;
+  position: relative; background: var(--panel-2); border: 1px solid var(--line); border-left: 4px solid hsl(var(--h) var(--fill-s) var(--fill-l));
+  border-radius: 10px; padding: 7px 8px 7px 6px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center;
+  transition: border-color .15s, box-shadow .2s, opacity .2s;
+}
+.card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.card.frame-only { background: repeating-linear-gradient(135deg, var(--panel-2) 0 8px, color-mix(in srgb, var(--panel-2) 80%, var(--line)) 8px 9px); }
+.card.has-error { border-color: var(--err); }
+.card.is-dragging { opacity: .25; }
+.card.enter { animation: card-in .45s var(--spring); }
+.card.leave { animation: card-out .2s var(--ease) forwards; }
+@keyframes card-in { from { opacity: 0; transform: translateY(-10px) scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes card-out { to { opacity: 0; transform: translateX(30px) scale(.95); } }
+.handle {
+  width: 26px; height: 32px; display: grid; place-items: center; cursor: grab; touch-action: none; color: var(--muted);
+  border: 0; background: transparent; border-radius: 6px; font-size: 16px; line-height: 1; padding: 0;
+}
+.handle:hover { color: var(--text); background: var(--panel); }
+.card-main { min-width: 0; }
+.card-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card-title strong { font-size: 14px; }
+.card-bytes { font-family: var(--mono); font-size: 12px; padding: 1px 7px; border-radius: 6px; background: hsl(var(--h) var(--fill-s) var(--fill-l)); color: var(--ink-on-fill); font-weight: 600; }
+.card-tag { font-size: 11px; color: var(--muted); }
+.card-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.card-actions { display: flex; gap: 2px; }
+.card-actions button {
+  width: 28px; height: 28px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: var(--muted); display: grid; place-items: center; padding: 0;
+}
+.card-actions button:hover { background: var(--panel); color: var(--text); }
+.card-actions button.rm:hover { color: var(--err); }
+.card-actions button[aria-expanded="true"] { color: var(--accent); }
+.card-actions svg { width: 16px; height: 16px; }
+.card-opts { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 4px 4px 34px; border-top: 1px dashed var(--line); margin-top: 4px; }
+.card-opts[hidden] { display: none; }
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.opt[hidden] { display: none; }
+.opt select, .opt input[type="number"] {
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: 7px; padding: 4px 8px; min-width: 0; max-width: 60%;
+}
+.opt input[type="number"] { width: 84px; font-family: var(--mono); }
+.opt input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.opt-note { font-size: 12px; color: var(--muted); }
+.refs { display: flex; gap: 6px; flex-wrap: wrap; grid-column: 2 / -1; }
+.refs a { font-size: 11px; font-family: var(--mono); color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+.refs a:hover { color: var(--accent); border-color: var(--accent); }
+
+.drop-indicator { position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent); pointer-events: none; transition: top .12s var(--ease); z-index: 3; }
+.drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; padding: 8px 14px; border-radius: 10px;
+  background: hsl(var(--h) var(--fill-s) var(--fill-l)); color: var(--ink-on-fill); font-weight: 650; font-size: 14px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35); transform-origin: 30% 50%; white-space: nowrap;
+  transition: background .15s, opacity .15s;
+}
+.drag-ghost.removing { background: var(--err); color: #fff; }
+.drag-ghost small { font-weight: 500; margin-left: 6px; opacity: .8; }
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+
+/* ---------------------------------------------------------------- MTU & KPIs */
+.mtu-row { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 12px; align-items: center; margin-top: 10px; }
+.mtu-row[hidden] { display: none; }
+.mtu-label { font-weight: 600; font-size: 14px; }
+.mtu-input { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 9px; background: var(--panel-2); padding-right: 10px; }
+.mtu-input input { width: 92px; border: 0; background: transparent; padding: 7px 10px; font-family: var(--mono); font-size: 16px; font-weight: 600; }
+.mtu-input input:focus { outline: none; }
+.mtu-input:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.unit { color: var(--muted); font-family: var(--mono); font-size: 13px; }
+.mtu-row .hint { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 720px) { .mtu-row { grid-template-columns: auto 1fr; } .mtu-row .chips { grid-column: 1 / -1; } }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 10px; margin-top: 16px; }
+@media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; position: relative; overflow: hidden; }
+.kpi.primary { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.kpi.primary::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--accent); }
+.kpi .k { font-size: 12px; color: var(--muted); }
+.kpi .v { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+.kpi .s { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi.bad .v { color: var(--err); }
+.kpi.pulse { animation: pulse .5s var(--ease); }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.ts-note { margin-top: 10px; }
+
+/* ---------------------------------------------------------------- warnings */
+.warnings { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.warnings li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); font-size: 13.5px; animation: card-in .3s var(--ease); }
+.warnings li .ic { font-weight: 800; font-family: var(--mono); text-align: center; border-radius: 6px; font-size: 12px; line-height: 20px; }
+.warnings li.error { border-color: color-mix(in srgb, var(--err) 60%, var(--line)); }
+.warnings li.error .ic { background: var(--err); color: #fff; }
+.warnings li.warn .ic { background: var(--warn); color: #1d1300; }
+.warnings li.info .ic { background: var(--info); color: #fff; }
+.warnings li.ok .ic { background: var(--ok); color: #04210f; }
+:root[data-theme="light"] .warnings li.warn .ic { color: #fff; }
+
+/* ---------------------------------------------------------------- byte layout */
+.legend-enc { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.legend-enc i { width: 16px; height: 12px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--line-2); position: relative; overflow: hidden; }
+.legend-enc i, .enc-hatch { background-image: repeating-linear-gradient(135deg, rgba(0,0,0,.28) 0 2px, transparent 2px 6px); }
+.framebar { display: flex; height: 38px; border-radius: 8px; overflow: hidden; background: var(--panel-2); border: 1px solid var(--line); }
+.framebar .seg-b {
+  --h: 210; height: 100%; background: hsl(var(--h) var(--fill-s) var(--fill-l)); min-width: 0; flex: none;
+  transition: width .5s var(--ease), background .3s; position: relative; box-shadow: inset -1px 0 0 rgba(0,0,0,.25); cursor: help;
+}
+.framebar .seg-b.payload { background: color-mix(in srgb, var(--muted) 22%, var(--panel-2)); }
+.framebar .seg-b.enc::after { content: ""; position: absolute; inset: 0; background-image: repeating-linear-gradient(135deg, rgba(0,0,0,.25) 0 2px, transparent 2px 6px); }
+.framebar .seg-b span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; }
+.ruler { position: relative; height: 18px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.ruler span { white-space: nowrap; position: absolute; transform: translateX(-50%); top: 2px; }
+.ruler span::before { content: ""; position: absolute; left: 50%; top: -4px; width: 1px; height: 4px; background: var(--line-2); }
+.ruler span:first-child { transform: none; }
+.ruler span:last-child { transform: translateX(-100%); }
+
+.bytemap { display: flex; flex-wrap: wrap; gap: 3px 0; padding: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+.bytemap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fld {
+  --h: 210; height: 34px; background: hsl(var(--h) var(--fill-s) var(--fill-l)); color: var(--ink-on-fill);
+  box-shadow: inset -1px 0 0 rgba(0,0,0,.28), inset 0 -2px 0 rgba(0,0,0,.12);
+  display: grid; place-items: center; overflow: hidden; font-size: 10.5px; font-weight: 600; font-family: var(--mono);
+  cursor: help; position: relative; transition: width .45s var(--ease), filter .15s; flex: none;
+}
+.fld.first { border-top-left-radius: 6px; border-bottom-left-radius: 6px; margin-left: 4px; }
+.fld.first:first-child { margin-left: 0; }
+.fld.last { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+.fld.enc::after { content: ""; position: absolute; inset: 0; background-image: repeating-linear-gradient(135deg, rgba(0,0,0,.22) 0 2px, transparent 2px 6px); pointer-events: none; }
+.fld.frame-only { opacity: .85; }
+.fld span { white-space: nowrap; overflow: hidden; text-overflow: clip; padding: 0 2px; position: relative; z-index: 1; }
+.fld:hover, .fld.active { filter: brightness(1.12) saturate(1.1); outline: 2px solid var(--text); outline-offset: -2px; z-index: 2; }
+.fld.payload {
+  background: transparent; color: var(--muted); border: 1.5px dashed var(--line-2); border-radius: 6px; margin: 0 4px; width: auto !important; padding: 0 12px; font-weight: 500;
+}
+.probe { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; margin-top: 14px; }
+.probe label { font-size: 13px; grid-column: 1 / -1; }
+.probe output { font-family: var(--mono); font-weight: 600; }
+.probe input[type="range"] { width: 100%; accent-color: var(--accent); }
+.probe .hint { grid-column: 1 / -1; margin: 0; }
+.fieldtable { margin-top: 12px; font-size: 13px; }
+.fieldtable summary { cursor: pointer; color: var(--muted); }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+.fieldtable table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.fieldtable th, .fieldtable td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.fieldtable td.n { font-family: var(--mono); text-align: right; }
+.fieldtable td .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: hsl(var(--h) var(--fill-s) var(--fill-l)); vertical-align: -1px; }
+
+/* ---------------------------------------------------------------- config */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 6px; overflow-x: auto; }
+.tabs button { border: 0; background: transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; font-size: 13.5px; }
+.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.cfg { position: relative; background: #0a0e15; border: 1px solid var(--line); border-radius: 0 0 10px 10px; border-top: 0; }
+.cfg pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 12.5px/1.6 var(--mono); color: #d8e2f0; min-height: 120px; }
+.cfg .copy { position: absolute; top: 8px; right: 8px; background: #1a2232; color: #d8e2f0; border-color: #2f3d5c; }
+.cfg .cm { color: #8b9bb4; }
+.cfg .num { color: #5ce1cf; font-weight: 600; }
+.cfg-refs, .sources { margin: 10px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
+.sources li b { color: var(--text); font-weight: 600; font-family: var(--mono); font-size: 12px; }
+
+/* ---------------------------------------------------------------- misc */
+.foot { text-align: center; color: var(--muted); font-size: 12px; padding: 0 16px 28px; }
+.tooltip {
+  position: fixed; z-index: 120; max-width: 300px; background: #0d1320; color: #e6ecf5; border: 1px solid #2f3d5c;
+  border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.45; pointer-events: none; box-shadow: var(--shadow);
+}
+.tooltip b { display: block; font-size: 13px; }
+.tooltip .tt-meta { font-family: var(--mono); color: #5ce1cf; font-size: 12px; margin: 2px 0 4px; }
+.tooltip .tt-ref { color: #9aa8bf; font-size: 11.5px; margin-top: 4px; }
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; background: var(--text); color: var(--bg);
+  padding: 10px 16px; border-radius: 10px; font-size: 13.5px; z-index: 130; transition: opacity .25s, transform .25s var(--ease); pointer-events: none; max-width: calc(100vw - 32px);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.summary-bar { display: none; }
+@media (max-width: 720px) {
+  .summary-bar {
+    display: flex; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30; justify-content: space-between; gap: 10px;
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow);
+    font-family: var(--mono); font-size: 13px; align-items: center;
+  }
+  .summary-bar b { font-size: 16px; }
+  .summary-bar .w { font-family: var(--sans); font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--err); color: #fff; }
+  .toast { bottom: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#results" data-i18n="skip">Skip to results</a>
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="26" height="5" rx="1.5"/><rect x="6" y="13" width="20" height="5" rx="1.5"/><rect x="9" y="21" width="14" height="5" rx="1.5"/></svg>
+    <div>
+      <h1 data-i18n="title">Encapsulation Calculator</h1>
+      <p class="tagline" data-i18n="tagline">Byte-exact MTU &amp; MSS for tunnels, VPNs and overlays</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button type="button" class="btn ghost" id="btn-share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/></svg><span data-i18n="share">Share</span></button>
+    <div class="seg" role="group" aria-label="Language / Sprache">
+      <button type="button" id="lang-en" aria-pressed="true" lang="en">EN</button>
+      <button type="button" id="lang-de" aria-pressed="false" lang="de">DE</button>
+    </div>
+    <button type="button" class="btn icon ghost" id="btn-theme" data-i18n-aria="theme" aria-label="Toggle dark / light mode">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="col col-build" aria-labelledby="h-palette">
+    <div class="panel panel-examples">
+      <h2 id="h-examples" data-i18n="examples">Examples</h2>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div class="panel panel-palette">
+      <h2 id="h-palette" data-i18n="palette">Layers</h2>
+      <p class="hint" id="palette-hint" data-i18n="paletteHint">Drag into the stack, or press Enter / tap to append.</p>
+      <div class="palette" id="palette" aria-labelledby="h-palette" aria-describedby="palette-hint"></div>
+    </div>
+  </section>
+
+  <section class="col col-stack" aria-labelledby="h-stack">
+    <div class="panel stack-panel" id="stack-panel">
+      <div class="panel-head">
+        <h2 id="h-stack" data-i18n="stack">Packet stack</h2>
+        <button type="button" class="btn small ghost" id="btn-clear" data-i18n="clear">Clear</button>
+      </div>
+      <p class="hint" id="stack-hint" data-i18n="stackHint">Outermost header first.</p>
+      <div class="wire-label" aria-hidden="true"><span>outer · first on the wire</span></div>
+      <ol class="stack" id="stack" aria-labelledby="h-stack" aria-describedby="stack-hint"></ol>
+      <div class="stack-empty" id="stack-empty" data-i18n="stackEmpty">Drop layers here – or tap a layer on the left.</div>
+      <div class="wire-label end" aria-hidden="true"><span>inner · payload</span></div>
+    </div>
+  </section>
+
+  <section class="col col-results" id="results" aria-labelledby="h-results" tabindex="-1">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 id="h-results" data-i18n="results">Results</h2>
+        <div class="seg" role="group" data-i18n-aria="mode" aria-label="Mode">
+          <button type="button" id="mode-f" aria-pressed="true" data-i18n="modeForward">Underlay → Inner</button>
+          <button type="button" id="mode-r" aria-pressed="false" data-i18n="modeReverse">Inner → Underlay</button>
+        </div>
+      </div>
+      <div class="mtu-row" id="row-underlay">
+        <label for="mtu" class="mtu-label"><span data-i18n="underlayMtu">Underlay MTU</span></label>
+        <div class="mtu-input"><input id="mtu" type="number" inputmode="numeric" min="68" max="65535" step="1" value="1500" aria-describedby="mtu-hint"><span class="unit">B</span></div>
+        <div class="chips" id="mtu-presets" role="group" aria-label="MTU presets"></div>
+        <p class="hint" id="mtu-hint" data-i18n="underlayHint"></p>
+      </div>
+      <div class="mtu-row" id="row-target" hidden>
+        <label for="target" class="mtu-label"><span data-i18n="targetMtu">Desired inner MTU</span></label>
+        <div class="mtu-input"><input id="target" type="number" inputmode="numeric" min="68" max="65535" step="1" value="1500" aria-describedby="target-hint"><span class="unit">B</span></div>
+        <div class="chips" id="target-presets" role="group" aria-label="Inner MTU presets"></div>
+        <p class="hint" id="target-hint" data-i18n="targetHint"></p>
+      </div>
+      <div class="kpis" id="kpis" aria-live="polite"></div>
+      <p class="hint ts-note" id="ts-note" hidden></p>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="warnings">Checks</h2>
+      <ul class="warnings" id="warnings"></ul>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="layout">Byte layout</h2>
+        <span class="legend-enc"><i></i><span data-i18n="encrypted">encrypted</span></span>
+      </div>
+      <h3 class="sub" data-i18n="layoutFrame">Whole frame to scale</h3>
+      <div class="framebar" id="framebar" role="img"></div>
+      <div class="ruler" id="ruler" aria-hidden="true"></div>
+      <h3 class="sub" id="h-bytemap"></h3>
+      <div class="bytemap" id="bytemap" role="list" tabindex="0" aria-labelledby="h-bytemap"></div>
+      <div class="probe">
+        <label for="probe"><span data-i18n="probe">Inner packet size</span>: <output id="probe-out"></output></label>
+        <input type="range" id="probe" min="0" max="1500" step="1" aria-describedby="probe-hint">
+        <button type="button" class="btn small ghost" id="probe-max" data-i18n="probeMax">max</button>
+        <p class="hint" id="probe-hint" data-i18n="probeHint"></p>
+      </div>
+      <details class="fieldtable">
+        <summary data-i18n="showTable">Show fields as table</summary>
+        <div class="table-wrap"><table id="fieldtable"></table></div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="config">Configuration</h2>
+      <p class="hint" data-i18n="configHint"></p>
+      <div class="tabs" role="tablist" id="cfg-tabs" aria-label="Vendor"></div>
+      <div class="cfg" role="tabpanel" id="cfg-panel" tabindex="0">
+        <button type="button" class="btn small copy" id="cfg-copy" data-i18n="copy">Copy</button>
+        <pre><code id="cfg-code"></code></pre>
+      </div>
+      <ul class="cfg-refs" id="cfg-refs"></ul>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="sources">Sources</h2>
+      <p class="hint" data-i18n="sourcesHint"></p>
+      <ul class="sources" id="sources"></ul>
+    </div>
+  </section>
+</main>
+
+<footer class="foot"><span data-i18n="footer">Runs fully offline · no tracking · no cookies · MIT licence</span> · v<span id="ver"></span></footer>
+
+<div class="summary-bar" id="summary-bar" aria-hidden="true"></div>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="live" aria-live="assertive"></div>
+
+<script>
+/*!
+ * Encapsulation Calculator – calculation core
+ * Pure functions only: no DOM access. Runs in the browser (window.EncapCalc)
+ * and in Node.js (module.exports) so it can be tested in isolation.
+ *
+ * MODEL
+ * -----
+ * A stack is an ordered list of layers, outermost (first on the wire) first.
+ *
+ *   [outer L2 group]  Ethernet / 802.1Q / QinQ / MACsec at the start of the stack.
+ *                     These bytes are added to the FRAME only. They do NOT
+ *                     consume the underlay MTU (IEEE 802.3: MTU = max MAC client
+ *                     data = 1500 for untagged and tagged frames).
+ *   [MTU layers]      Everything after the outer L2 group (PPPoE, MPLS, IP,
+ *                     UDP, tunnels, inner Ethernet ...) lives inside the
+ *                     underlay MTU.
+ *
+ * "Underlay MTU" = the L3 MTU / maximum Ethernet payload of the physical link.
+ * "Inner MTU"    = the largest packet that fits at the innermost IP layer
+ *                  (the IP layer that carries only UDP/TCP or nothing).
+ * "Overhead"     = underlay MTU - inner MTU (includes cipher block alignment loss).
+ *
+ * Every byte count below cites its source. See REFS.
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.EncapCalc = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // References
+  // ---------------------------------------------------------------------------
+  var RFC = function (n) { return 'https://www.rfc-editor.org/rfc/rfc' + n; };
+  var REFS = {
+    'IEEE-802.3':   { t: 'IEEE 802.3 Ethernet – MAC header 14 B (DA 6, SA 6, EtherType 2), FCS 4 B, preamble+SFD 8 B, min. inter-packet gap 12 B, max. client data 1500 B', u: 'https://standards.ieee.org/ieee/802.3/10422/' },
+    'IEEE-802.1Q':  { t: 'IEEE 802.1Q – VLAN tag 4 B (TPID 0x8100 + TCI); 802.1ad S-tag 4 B (TPID 0x88A8)', u: 'https://standards.ieee.org/ieee/802.1Q/10323/' },
+    'IEEE-802.1AE': { t: 'IEEE 802.1AE MACsec – SecTAG 8 B, or 16 B with explicit SCI; ICV 16 B (GCM-AES cipher suites)', u: 'https://standards.ieee.org/ieee/802.1AE/7149/' },
+    'CISCO-MACSEC': { t: 'Cisco xrdocs: MACsec on NCS-5500 – "16B SecTag and 16B ICV, so the data plane overhead is 32B"; SCI 8 B optional', u: 'http://xrdocs.io/ncs5500/tutorials/macsec-on-ncs-5500-technology-and-platform-overview' },
+    RFC2516: { t: 'RFC 2516 – PPPoE: 6 B PPPoE header + 2 B PPP Protocol ID, max. payload 1492', u: RFC(2516) },
+    RFC4638: { t: 'RFC 4638 – PPPoE MTU/MRU > 1492 (PPP-Max-Payload tag, "baby jumbo" 1508 underlay)', u: RFC(4638) },
+    RFC3032: { t: 'RFC 3032 – MPLS label stack entry 4 B (Label 20 bit, TC 3, S 1, TTL 8)', u: RFC(3032) },
+    RFC791:  { t: 'RFC 791 – IPv4 header 20 B + 0–40 B options (IHL in 32-bit words); every host must accept 576 B datagrams; min. MTU 68', u: RFC(791) },
+    RFC8200: { t: 'RFC 8200 – IPv6 header 40 B; minimum link MTU 1280 B (Section 5)', u: RFC(8200) },
+    RFC8754: { t: 'RFC 8754 – IPv6 Segment Routing Header: 8 B fixed + 16 B per SID', u: RFC(8754) },
+    RFC8986: { t: 'RFC 8986 – SRv6 H.Encaps.Red: first SID not repeated in SRH; no SRH with a single SID', u: RFC(8986) },
+    RFC768:  { t: 'RFC 768 – UDP header 8 B', u: RFC(768) },
+    RFC9293: { t: 'RFC 9293 – TCP header 20 B without options; MSS excludes IP and TCP headers', u: RFC(9293) },
+    RFC7323: { t: 'RFC 7323 – TCP Timestamps option 10 B (+2 B NOP padding = 12 B per segment)', u: RFC(7323) },
+    RFC879:  { t: 'RFC 879 / RFC 6691 – MSS = MTU − 20 B IP − 20 B TCP (IPv6: MTU − 40 − 20)', u: RFC(6691) },
+    RFC2784: { t: 'RFC 2784 – GRE base header 4 B; optional Checksum+Reserved1 4 B', u: RFC(2784) },
+    RFC2890: { t: 'RFC 2890 – GRE Key 4 B and Sequence Number 4 B extensions', u: RFC(2890) },
+    RFC7348: { t: 'RFC 7348 – VXLAN header 8 B over UDP (port 4789), carries an inner Ethernet frame (no inner FCS)', u: RFC(7348) },
+    RFC8926: { t: 'RFC 8926 – Geneve: 8 B base header + 0–252 B options (multiple of 4) over UDP 6081', u: RFC(8926) },
+    RFC9300: { t: 'RFC 9300 – LISP data-plane header 8 B over UDP 4341, carries IPv4/IPv6', u: RFC(9300) },
+    RFC4303: { t: 'RFC 4303 – ESP: SPI 4 B + Sequence 4 B; trailer Pad Length 1 B + Next Header 1 B; padding aligns to cipher block size and to 4 B', u: RFC(4303) },
+    RFC3602: { t: 'RFC 3602 – AES-CBC in ESP: IV 16 B, 16 B block size', u: RFC(3602) },
+    RFC4106: { t: 'RFC 4106 – AES-GCM in ESP: IV 8 B, ICV 16 B (MAY 8 or 12), padding only to 4 B', u: RFC(4106) },
+    RFC7634: { t: 'RFC 7634 – ChaCha20-Poly1305 in ESP: IV 8 B, ICV 16 B, padding only to 4 B', u: RFC(7634) },
+    RFC4868: { t: 'RFC 4868 – HMAC-SHA-256-128 / -384-192 / -512-256: ICV 16 / 24 / 32 B', u: RFC(4868) },
+    RFC2404: { t: 'RFC 2404 – HMAC-SHA-1-96: ICV 12 B', u: RFC(2404) },
+    RFC8221: { t: 'RFC 8221 – ESP algorithm recommendations (ENCR_AES_GCM_16 MUST, 8/12 B ICV not recommended)', u: RFC(8221) },
+    RFC3948: { t: 'RFC 3948 – ESP in UDP (NAT-T): 8 B UDP header, port 4500', u: RFC(3948) },
+    'WG-PAPER': { t: 'WireGuard whitepaper §5.4.6 – transport data: type 1 B, reserved 3 B, receiver 4 B, counter 8 B, Poly1305 tag 16 B; plaintext padded to a multiple of 16 B', u: 'https://www.wireguard.com/papers/wireguard.pdf' },
+    'WG-LINUX': { t: 'Linux drivers/net/wireguard (messages.h MESSAGE_PADDING_MULTIPLE = 16; send.c caps padding at the interface MTU)', u: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/net/wireguard/send.c' },
+    'WG-QUICK': { t: 'wg-quick: default MTU = underlay − 80 (IPv6 40 B + WireGuard 40 B incl. UDP) → 1420', u: 'https://lists.zx2c4.com/pipermail/wireguard/2023-November/008251.html' }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  function clampInt(v, min, max, def) {
+    var n = parseInt(v, 10);
+    if (!isFinite(n)) return def;
+    return Math.min(max, Math.max(min, n));
+  }
+  function round4(v) { return Math.floor(v / 4) * 4; }
+  function f(name, bytes, d) { return { name: name, bytes: bytes, d: d || '' }; }
+
+  var ESP_CIPHERS = {
+    // iv: bytes on the wire, align: block size used for padding, aead: built-in ICV
+    'aes-cbc':  { label: 'AES-CBC',           iv: 16, align: 16, aead: false, ref: 'RFC3602' },
+    'aes-gcm':  { label: 'AES-GCM',           iv: 8,  align: 4,  aead: true,  ref: 'RFC4106' },
+    'chacha20': { label: 'ChaCha20-Poly1305', iv: 8,  align: 4,  aead: true,  ref: 'RFC7634' }
+  };
+  var ESP_INTEG = {
+    'sha1':   { label: 'HMAC-SHA-1-96',     icv: 12, ref: 'RFC2404' },
+    'sha256': { label: 'HMAC-SHA-256-128',  icv: 16, ref: 'RFC4868' },
+    'sha384': { label: 'HMAC-SHA-384-192',  icv: 24, ref: 'RFC4868' },
+    'sha512': { label: 'HMAC-SHA-512-256',  icv: 32, ref: 'RFC4868' }
+  };
+
+  function espParams(o) {
+    var c = ESP_CIPHERS[o.c] || ESP_CIPHERS['aes-gcm'];
+    var icv;
+    if (o.c === 'aes-cbc') icv = (ESP_INTEG[o.a] || ESP_INTEG.sha256).icv;
+    else if (o.c === 'chacha20') icv = 16;
+    else icv = o.i;
+    var natt = o.n ? 8 : 0;
+    return { iv: c.iv, align: c.align, icv: icv, natt: natt, fixed: natt + 8 + c.iv + icv };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Layer catalogue
+  //   group: l2 | shim | l3 | l4 | tunnel | sec
+  //   opts:  [{k, type:'int'|'bool'|'enum', def, min, max, step, values}]
+  //   hdr(o, ctx)  -> header fields      trl(o, ctx) -> trailer fields
+  //   cap(o, capIn, ctx) -> max payload (only for layers whose payload capacity
+  //                         is not simply capIn - header - trailer)
+  //   enc(o, payload, ctx) -> {pad} padding for a given payload size
+  // ---------------------------------------------------------------------------
+  var L2_TYPES = ['eth', 'dot1q', 'qinq', 'macsec'];
+  var IP_TYPES = ['ipv4', 'ipv6'];
+  var TUNNEL_TYPES = ['gre', 'vxlan', 'geneve', 'lisp', 'esp', 'wg', 'srv6', 'mpls', 'pppoe'];
+
+  var LAYERS = {
+    eth: {
+      name: 'Ethernet', group: 'l2', refs: ['IEEE-802.3'], opts: [],
+      hdr: function () {
+        return [f('Destination MAC', 6, 'dst'), f('Source MAC', 6, 'src'), f('EtherType', 2, 'ethertype')];
+      },
+      // FCS only on the outermost (physical) Ethernet. Inner Ethernet inside
+      // VXLAN/Geneve/GRE-TEB is carried without FCS (RFC 7348 §5).
+      trl: function (o, ctx) { return ctx.outerL2 ? [f('FCS', 4, 'fcs')] : []; }
+    },
+    dot1q: {
+      name: '802.1Q', group: 'l2', refs: ['IEEE-802.1Q'], opts: [],
+      hdr: function () { return [f('TPID 0x8100', 2, 'tpid'), f('TCI (PCP/DEI/VID)', 2, 'tci')]; }
+    },
+    qinq: {
+      name: 'QinQ', group: 'l2', refs: ['IEEE-802.1Q'], opts: [],
+      hdr: function () {
+        return [f('S-TPID 0x88A8', 2, 'stpid'), f('S-TCI (outer VID)', 2, 'tci'),
+                f('C-TPID 0x8100', 2, 'tpid'), f('C-TCI (inner VID)', 2, 'tci')];
+      }
+    },
+    macsec: {
+      name: 'MACsec', group: 'sec', refs: ['IEEE-802.1AE', 'CISCO-MACSEC'],
+      opts: [{ k: 'sci', type: 'bool', def: 1 }],
+      hdr: function (o) {
+        var r = [f('EtherType 0x88E5', 2, 'macsecet'), f('TCI/AN', 1, 'tcian'), f('Short Length', 1, 'sl'), f('Packet Number', 4, 'pn')];
+        if (o.sci) r.push(f('SCI', 8, 'sci'));
+        return r;
+      },
+      trl: function () { return [f('ICV', 16, 'micv')]; }
+    },
+    pppoe: {
+      name: 'PPPoE', group: 'shim', refs: ['RFC2516', 'RFC4638'], opts: [],
+      hdr: function () {
+        return [f('Ver/Type', 1, 'pppver'), f('Code', 1, 'pppcode'), f('Session ID', 2, 'pppsess'),
+                f('Length', 2, 'ppplen'), f('PPP Protocol', 2, 'pppproto')];
+      }
+    },
+    mpls: {
+      name: 'MPLS', group: 'shim', refs: ['RFC3032'],
+      opts: [{ k: 'n', type: 'int', def: 2, min: 1, max: 12, step: 1 }],
+      hdr: function (o) {
+        var r = [];
+        for (var i = 1; i <= o.n; i++) r.push(f('Label ' + i + (i === o.n ? ' (S=1)' : ''), 4, 'label'));
+        return r;
+      }
+    },
+    ipv4: {
+      name: 'IPv4', group: 'l3', refs: ['RFC791'],
+      opts: [{ k: 'o', type: 'int', def: 0, min: 0, max: 40, step: 4 }],
+      hdr: function (o) {
+        var r = [f('Version/IHL', 1, 'verihl'), f('DSCP/ECN', 1, 'dscp'), f('Total Length', 2, 'totlen'),
+                 f('Identification', 2, 'ident'), f('Flags/Fragment Offset', 2, 'frag'), f('TTL', 1, 'ttl'),
+                 f('Protocol', 1, 'proto'), f('Header Checksum', 2, 'csum'),
+                 f('Source Address', 4, 'src4'), f('Destination Address', 4, 'dst4')];
+        if (o.o) r.push(f('Options', o.o, 'ipopt'));
+        return r;
+      }
+    },
+    ipv6: {
+      name: 'IPv6', group: 'l3', refs: ['RFC8200'], opts: [],
+      hdr: function () {
+        return [f('Version/TC/Flow Label', 4, 'v6first'), f('Payload Length', 2, 'plen'), f('Next Header', 1, 'nh'),
+                f('Hop Limit', 1, 'hop'), f('Source Address', 16, 'src6'), f('Destination Address', 16, 'dst6')];
+      }
+    },
+    srv6: {
+      name: 'SRv6 SRH', group: 'tunnel', refs: ['RFC8754', 'RFC8986'],
+      opts: [{ k: 'n', type: 'int', def: 2, min: 1, max: 16, step: 1 }, { k: 'r', type: 'bool', def: 0 }],
+      hdr: function (o) {
+        var sids = o.r ? o.n - 1 : o.n;
+        if (sids <= 0) return [];
+        var r = [f('Next Header', 1, 'nh'), f('Hdr Ext Len', 1, 'hel'), f('Routing Type 4', 1, 'rtype'),
+                 f('Segments Left', 1, 'sl6'), f('Last Entry', 1, 'le'), f('Flags', 1, 'flags'), f('Tag', 2, 'tag')];
+        for (var i = 0; i < sids; i++) r.push(f('Segment List[' + i + ']', 16, 'sid'));
+        return r;
+      }
+    },
+    udp: {
+      name: 'UDP', group: 'l4', refs: ['RFC768'], opts: [],
+      hdr: function () {
+        return [f('Source Port', 2, 'sport'), f('Destination Port', 2, 'dport'), f('Length', 2, 'ulen'), f('Checksum', 2, 'ucsum')];
+      }
+    },
+    tcp: {
+      name: 'TCP', group: 'l4', refs: ['RFC9293', 'RFC7323'],
+      opts: [{ k: 'ts', type: 'bool', def: 0 }],
+      hdr: function (o) {
+        var r = [f('Source Port', 2, 'sport'), f('Destination Port', 2, 'dport'), f('Sequence Number', 4, 'seq'),
+                 f('Acknowledgment Number', 4, 'ack'), f('Data Offset/Flags', 2, 'tflags'), f('Window', 2, 'win'),
+                 f('Checksum', 2, 'tcsum'), f('Urgent Pointer', 2, 'urg')];
+        if (o.ts) r.push(f('NOP, NOP', 2, 'nop'), f('Timestamps (kind 8, len 10)', 10, 'tsopt'));
+        return r;
+      }
+    },
+    gre: {
+      name: 'GRE', group: 'tunnel', refs: ['RFC2784', 'RFC2890'],
+      opts: [{ k: 'c', type: 'bool', def: 0 }, { k: 'k', type: 'bool', def: 0 }, { k: 's', type: 'bool', def: 0 }],
+      hdr: function (o) {
+        var r = [f('Flags/Version', 2, 'greflags'), f('Protocol Type', 2, 'greproto')];
+        if (o.c) r.push(f('Checksum', 2, 'grecsum'), f('Reserved1', 2, 'rsvd'));
+        if (o.k) r.push(f('Key', 4, 'grekey'));
+        if (o.s) r.push(f('Sequence Number', 4, 'greseq'));
+        return r;
+      }
+    },
+    vxlan: {
+      name: 'VXLAN', group: 'tunnel', refs: ['RFC7348'], opts: [],
+      hdr: function () { return [f('Flags (I)', 1, 'vxflags'), f('Reserved', 3, 'rsvd'), f('VNI', 3, 'vni'), f('Reserved', 1, 'rsvd')]; }
+    },
+    geneve: {
+      name: 'Geneve', group: 'tunnel', refs: ['RFC8926'],
+      opts: [{ k: 'o', type: 'int', def: 0, min: 0, max: 252, step: 4 }],
+      hdr: function (o) {
+        var r = [f('Ver/Opt Len', 1, 'gnver'), f('O/C flags', 1, 'gnflags'), f('Protocol Type', 2, 'greproto'),
+                 f('VNI', 3, 'vni'), f('Reserved', 1, 'rsvd')];
+        if (o.o) r.push(f('Options (TLVs)', o.o, 'gnopt'));
+        return r;
+      }
+    },
+    lisp: {
+      name: 'LISP', group: 'tunnel', refs: ['RFC9300'], opts: [],
+      hdr: function () { return [f('Flags N/L/E/V/I', 1, 'lispflags'), f('Nonce / Map-Version', 3, 'nonce'), f('Instance ID / LSBs', 4, 'iid')]; }
+    },
+    esp: {
+      name: 'IPsec ESP', group: 'sec', refs: ['RFC4303', 'RFC3602', 'RFC4106', 'RFC7634', 'RFC4868', 'RFC2404', 'RFC3948', 'RFC8221'],
+      opts: [
+        { k: 'm', type: 'enum', def: 'tunnel', values: ['tunnel', 'transport'] },
+        { k: 'n', type: 'bool', def: 0 },
+        { k: 'c', type: 'enum', def: 'aes-gcm', values: ['aes-gcm', 'aes-cbc', 'chacha20'] },
+        { k: 'b', type: 'enum', def: '256', values: ['128', '256'] },
+        { k: 'i', type: 'enum', def: 16, values: [8, 12, 16] },
+        { k: 'a', type: 'enum', def: 'sha256', values: ['sha1', 'sha256', 'sha384', 'sha512'] }
+      ],
+      hdr: function (o) {
+        var p = espParams(o), r = [];
+        if (p.natt) r.push(f('NAT-T UDP Src Port', 2, 'sport'), f('NAT-T UDP Dst Port 4500', 2, 'dport'),
+                           f('NAT-T UDP Length', 2, 'ulen'), f('NAT-T UDP Checksum', 2, 'ucsum'));
+        r.push(f('SPI', 4, 'spi'), f('Sequence Number', 4, 'espseq'), f('IV', p.iv, 'iv'));
+        return r;
+      },
+      trl: function (o, ctx) {
+        var p = espParams(o);
+        var r = [];
+        if (ctx.pad) r.push(f('Padding', ctx.pad, 'pad', true));
+        r.push(f('Pad Length', 1, 'padlen', true), f('Next Header', 1, 'espnh', true), f('ICV', p.icv, 'icv'));
+        return r;
+      },
+      cap: function (o, capIn) {
+        var p = espParams(o);
+        // encrypted part (payload + padding + 2) must be a multiple of align
+        var avail = capIn - p.fixed;
+        return Math.floor(avail / p.align) * p.align - 2;
+      },
+      pad: function (o, payload) {
+        var p = espParams(o);
+        return (p.align - ((payload + 2) % p.align)) % p.align;
+      }
+    },
+    wg: {
+      name: 'WireGuard', group: 'sec', refs: ['WG-PAPER', 'WG-LINUX', 'WG-QUICK'], opts: [],
+      hdr: function () { return [f('Type = 4', 1, 'wgtype'), f('Reserved', 3, 'rsvd'), f('Receiver Index', 4, 'wgrecv'), f('Counter', 8, 'wgctr')]; },
+      trl: function (o, ctx) {
+        var r = [];
+        if (ctx.pad) r.push(f('Padding (to 16 B)', ctx.pad, 'wgpad', true));
+        r.push(f('Poly1305 Tag', 16, 'wgtag'));
+        return r;
+      },
+      // Padding never exceeds the WireGuard interface MTU (send.c), so the max
+      // payload is capIn - 32.
+      pad: function (o, payload, ctx) {
+        var padded = Math.ceil(payload / 16) * 16;
+        if (padded > ctx.capOut) padded = ctx.capOut;
+        return Math.max(0, padded - payload);
+      }
+    }
+  };
+
+  // Predecessors each layer may directly follow ('^' = start of stack).
+  var FOLLOWS = {
+    eth:    ['^', 'vxlan', 'geneve', 'gre', 'mpls'],
+    dot1q:  ['eth', 'dot1q', 'qinq', 'macsec'],
+    qinq:   ['eth', 'macsec'],
+    macsec: ['eth'],
+    pppoe:  ['eth', 'dot1q', 'qinq', 'macsec'],
+    mpls:   ['^', 'eth', 'dot1q', 'qinq', 'macsec', 'pppoe', 'mpls', 'gre', 'udp'],
+    ipv4:   ['^', 'eth', 'dot1q', 'qinq', 'macsec', 'pppoe', 'mpls', 'gre', 'esp', 'wg', 'lisp', 'geneve', 'ipv4', 'ipv6', 'srv6'],
+    ipv6:   ['^', 'eth', 'dot1q', 'qinq', 'macsec', 'pppoe', 'mpls', 'gre', 'esp', 'wg', 'lisp', 'geneve', 'ipv4', 'ipv6', 'srv6'],
+    srv6:   ['ipv6'],
+    udp:    ['ipv4', 'ipv6', 'srv6', 'esp'],
+    tcp:    ['ipv4', 'ipv6', 'srv6', 'esp'],
+    gre:    ['ipv4', 'ipv6', 'srv6', 'esp'],
+    vxlan:  ['udp'],
+    geneve: ['udp'],
+    lisp:   ['udp'],
+    esp:    ['ipv4', 'ipv6', 'srv6'],
+    wg:     ['udp']
+  };
+
+  // ---------------------------------------------------------------------------
+  // Normalisation
+  // ---------------------------------------------------------------------------
+  function normalizeLayer(l) {
+    var def = LAYERS[l && l.type];
+    if (!def) return null;
+    var o = {}, src = l.opts || {};
+    def.opts.forEach(function (op) {
+      var v = src[op.k];
+      if (op.type === 'int') {
+        var n = clampInt(v, op.min, op.max, op.def);
+        if (op.step > 1) n = Math.floor(n / op.step) * op.step;
+        o[op.k] = n;
+      } else if (op.type === 'bool') {
+        o[op.k] = (v === undefined || v === null || v === '') ? op.def : ((v === true || v === 1 || v === '1') ? 1 : 0);
+      } else {
+        var found = op.def;
+        op.values.forEach(function (x) { if (String(x) === String(v)) found = x; });
+        o[op.k] = found;
+      }
+    });
+    return { type: l.type, opts: o };
+  }
+
+  function normalizeStack(layers) {
+    return (layers || []).map(normalizeLayer).filter(Boolean);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Core analysis
+  // ---------------------------------------------------------------------------
+  function sumBytes(list) { return list.reduce(function (s, x) { return s + x.bytes; }, 0); }
+
+  function l2GroupLength(layers) {
+    var i = 0;
+    while (i < layers.length && L2_TYPES.indexOf(layers[i].type) >= 0) i++;
+    return i;
+  }
+
+  // Innermost IP layer that only carries UDP/TCP (or nothing). -1 if none.
+  function anchorIndex(layers, start) {
+    for (var i = layers.length - 1; i >= start; i--) {
+      var t = layers[i].type;
+      if (IP_TYPES.indexOf(t) >= 0) return i;
+      if (t !== 'udp' && t !== 'tcp') return -1;
+    }
+    return -1;
+  }
+
+  function staticSizes(layer, ctx) {
+    var def = LAYERS[layer.type];
+    var h = def.hdr(layer.opts, ctx);
+    var t = def.trl ? def.trl(layer.opts, ctx) : [];
+    return { hdr: h, trl: t, h: sumBytes(h), t: sumBytes(t) };
+  }
+
+  /** Payload capacity of each MTU layer for a given underlay MTU. */
+  function capacities(layers, l2len, mtu) {
+    var caps = [];   // caps[i] = max size of the packet starting at layer i
+    var cap = mtu;
+    for (var i = l2len; i < layers.length; i++) {
+      caps[i] = cap;
+      var L = layers[i], def = LAYERS[L.type];
+      if (def.cap) cap = def.cap(L.opts, cap);
+      else {
+        var s = staticSizes(L, { outerL2: false, pad: 0 });
+        cap = cap - s.h - s.t;
+      }
+    }
+    caps[layers.length] = cap; // payload capacity of the innermost layer
+    return caps;
+  }
+
+  function innerInfo(layers, mtu) {
+    var l2len = l2GroupLength(layers);
+    var caps = capacities(layers, l2len, mtu);
+    var a = anchorIndex(layers, l2len);
+    var idx = a >= 0 ? a : layers.length;
+    return { l2len: l2len, caps: caps, anchor: a, innerMTU: caps[idx], anchorPos: idx };
+  }
+
+  /**
+   * analyze({mtu, layers, probe}) -> full result.
+   * probe: size of the inner packet to draw (defaults to the inner MTU).
+   */
+  function analyze(state) {
+    var layers = normalizeStack(state.layers);
+    var mtu = clampInt(state.mtu, 0, 1000000, 1500);
+    var info = innerInfo(layers, mtu);
+    var l2len = info.l2len, caps = info.caps, a = info.anchor, pos = info.anchorPos;
+    var innerMTU = info.innerMTU;
+    var innerFamily = a >= 0 ? layers[a].type : null;
+
+    var probe = state.probe == null || state.probe === '' ? innerMTU : clampInt(state.probe, 0, Math.max(0, innerMTU), innerMTU);
+    if (innerMTU <= 0) probe = 0;
+
+    // sizes[i] = actual size of the packet starting at layer i (for the probe)
+    var sizes = [], detail = [];
+    sizes[pos] = probe;
+    // inward from the anchor (UDP/TCP after inner IP)
+    for (var j = pos; j < layers.length; j++) {
+      var sj = staticSizes(layers[j], { outerL2: false, pad: 0 });
+      detail[j] = { hdr: sj.hdr, trl: sj.trl, h: sj.h, t: sj.t, pad: 0 };
+      sizes[j + 1] = Math.max(0, sizes[j] - sj.h - sj.t);
+    }
+    // outward from the anchor
+    for (var i = pos - 1; i >= l2len; i--) {
+      var L = layers[i], def = LAYERS[L.type], payload = sizes[i + 1];
+      var pad = def.pad ? def.pad(L.opts, payload, { capOut: caps[i + 1] }) : 0;
+      var si = staticSizes(L, { outerL2: false, pad: pad });
+      detail[i] = { hdr: si.hdr, trl: si.trl, h: si.h, t: si.t, pad: pad };
+      sizes[i] = payload + si.h + si.t;
+    }
+    var packetSize = l2len < layers.length ? sizes[l2len] : probe;
+    // outer L2 (frame only)
+    var l2h = 0, l2t = 0;
+    for (var k = 0; k < l2len; k++) {
+      var sk = staticSizes(layers[k], { outerL2: true, pad: 0 });
+      detail[k] = { hdr: sk.hdr, trl: sk.trl, h: sk.h, t: sk.t, pad: 0 };
+      l2h += sk.h; l2t += sk.t;
+    }
+    var hasEth = l2len > 0 && layers[0].type === 'eth';
+    var maxFrame = hasEth ? mtu + l2h + l2t : null;
+
+    var mssV4 = innerMTU - 20 - 20, mssV6 = innerMTU - 40 - 20;
+    if (innerFamily === 'ipv4') mssV4 -= layers[a].opts.o; // IPv4 options reduce MSS
+    var tcpIdx = -1;
+    layers.forEach(function (l, n) { if (l.type === 'tcp' && n > a && a >= 0) tcpIdx = n; });
+
+    var res = {
+      mtu: mtu,
+      layers: layers,
+      l2len: l2len,
+      anchor: a,
+      innerFamily: innerFamily,
+      innerMTU: innerMTU,
+      overhead: mtu - innerMTU,
+      overheadPct: mtu > 0 ? (mtu - innerMTU) / mtu * 100 : 0,
+      l2Overhead: l2h + l2t,
+      mssV4: mssV4,
+      mssV6: mssV6,
+      mssInner: innerFamily === 'ipv6' ? mssV6 : mssV4,
+      tsPayload: tcpIdx >= 0 && layers[tcpIdx].opts.ts ? (innerFamily === 'ipv6' ? mssV6 : mssV4) - 12 : null,
+      frameSize: maxFrame,                         // L2 frame incl. FCS at full MTU
+      wireSize: maxFrame != null ? maxFrame + 20 : null, // + preamble/SFD 8 + IPG 12
+      probe: probe,
+      packetSize: packetSize,
+      probeFrame: hasEth ? packetSize + l2h + l2t : null,
+      capacities: caps,
+      sizes: sizes,
+      detail: detail,
+      warnings: []
+    };
+    res.warnings = validate(layers, res);
+    res.layout = buildLayout(layers, res);
+    return res;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Byte layout in wire order
+  // ---------------------------------------------------------------------------
+  function buildLayout(layers, res) {
+    var heads = [], tails = [], payloadBytes = 0;
+    var encFrom = []; // encFrom[i] = true when layer i lies inside an encrypted payload
+    var inside = false;
+    layers.forEach(function (l, i) {
+      encFrom[i] = inside;
+      if (l.type === 'esp' || l.type === 'wg' || l.type === 'macsec') inside = true;
+    });
+    layers.forEach(function (l, i) {
+      var d = res.detail[i];
+      if (!d) return;
+      var outer = i < res.l2len;
+      d.hdr.forEach(function (fl) {
+        heads.push({ layer: i, type: l.type, name: fl.name, bytes: fl.bytes, key: fl.d, enc: encFrom[i], frameOnly: outer });
+      });
+      var t = d.trl.map(function (fl) {
+        // ESP padding/pad length/next header and WG padding are encrypted
+        return { layer: i, type: l.type, name: fl.name, bytes: fl.bytes, key: fl.d, enc: encFrom[i] || (fl.d === 'pad' || fl.d === 'padlen' || fl.d === 'espnh' || fl.d === 'wgpad'), frameOnly: outer, trailer: true };
+      });
+      tails.unshift.apply(tails, t);
+    });
+    var lastSize = res.sizes[layers.length];
+    payloadBytes = lastSize != null ? lastSize : res.probe;
+    var off = 0;
+    var all = heads.concat([{ layer: -1, type: 'payload', name: 'Payload', bytes: Math.max(0, payloadBytes), key: 'payload', enc: inside, payload: true }]).concat(tails);
+    all.forEach(function (x) { x.offset = off; off += x.bytes; });
+    return { fields: all, total: off, encrypted: inside };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Validation – returns [{level:'error'|'warn'|'info', code, p:{...}}]
+  // ---------------------------------------------------------------------------
+  function validate(layers, res) {
+    var w = [];
+    function add(level, code, p) { w.push({ level: level, code: code, p: p || {} }); }
+    if (!layers.length) { add('info', 'EMPTY'); return w; }
+
+    if (res.mtu < 68) add('error', 'UNDERLAY_TOO_SMALL', { mtu: res.mtu });
+    if (res.mtu > 65535) add('error', 'UNDERLAY_TOO_BIG', { mtu: res.mtu });
+
+    layers.forEach(function (l, i) {
+      var prev = i === 0 ? '^' : layers[i - 1].type;
+      var allowed = FOLLOWS[l.type] || [];
+      if (allowed.indexOf(prev) < 0) {
+        if (prev === '^') add('error', 'BAD_START', { layer: LAYERS[l.type].name, i: i });
+        else if (l.type === 'esp' && prev === 'udp') add('warn', 'ESP_USE_NATT', { i: i });
+        else add('error', 'BAD_ORDER', { layer: LAYERS[l.type].name, prev: LAYERS[prev].name, i: i });
+      }
+      var next = layers[i + 1] ? layers[i + 1].type : null;
+      if (l.type === 'vxlan' && next !== 'eth') add('error', 'VXLAN_NEEDS_ETH', { i: i });
+      if (l.type === 'lisp' && next === 'eth') add('warn', 'LISP_ETH', { i: i });
+      if (l.type === 'tcp' && next) add('error', 'AFTER_TCP', { i: i });
+      if (l.type === 'esp') {
+        var isIP = next === 'ipv4' || next === 'ipv6';
+        if (l.opts.m === 'tunnel' && next && !isIP) add('error', 'ESP_TUNNEL_NEEDS_IP', { i: i });
+        if (l.opts.m === 'transport' && isIP) add('warn', 'ESP_TRANSPORT_IP', { i: i });
+        if (l.opts.c === 'aes-gcm' && l.opts.i !== 16) add('info', 'GCM_SHORT_ICV', { icv: l.opts.i, i: i });
+        if (l.opts.c === 'aes-cbc' && l.opts.a === 'sha1') add('info', 'SHA1', { i: i });
+      }
+      if (['gre', 'vxlan', 'geneve', 'lisp', 'esp', 'wg'].indexOf(l.type) >= 0 && !next) add('info', 'TUNNEL_EMPTY', { layer: LAYERS[l.type].name, i: i });
+      if (l.type === 'macsec' && i >= res.l2len) add('warn', 'MACSEC_INNER', { i: i });
+      if (l.type === 'pppoe' && res.mtu > 1500) add('info', 'PPPOE_BABY_JUMBO', { i: i });
+      if (l.type === 'srv6' && l.opts.r && l.opts.n === 1) add('info', 'SRV6_NO_SRH', { i: i });
+      if (l.type === 'eth' && i > 0 && i < res.l2len) add('error', 'DUP_ETH', { i: i });
+    });
+    // de-duplicate identical BAD_ORDER entries
+    var seen = {};
+    w = w.filter(function (x) { var k = x.code + ':' + x.p.i; if (seen[k]) return false; seen[k] = 1; return true; });
+
+    if (res.l2len > 0 && layers[0].type !== 'eth' && !w.some(function (x) { return x.code === 'BAD_START'; })) add('error', 'BAD_START', { layer: LAYERS[layers[0].type].name, i: 0 });
+
+    if (res.innerMTU <= 0) add('error', 'NO_CAPACITY', { v: res.innerMTU });
+    else if (res.innerFamily === 'ipv6' && res.innerMTU < 1280) add('error', 'IPV6_MIN', { v: res.innerMTU });
+    else if (res.innerFamily === 'ipv4' && res.innerMTU < 68) add('error', 'IPV4_MIN68', { v: res.innerMTU });
+    else if (res.innerFamily === 'ipv4' && res.innerMTU < 576) add('warn', 'IPV4_MIN', { v: res.innerMTU });
+    if (res.innerMTU > 0 && res.innerFamily === 'ipv4' && res.innerMTU < 1280) add('info', 'NO_IPV6_INSIDE', { v: res.innerMTU });
+
+    // Any IPv6 layer inside the MTU that is too small (e.g. outer IPv6 of an inner tunnel)
+    for (var i = res.l2len; i < layers.length; i++) {
+      if (layers[i].type === 'ipv6' && i !== res.anchor && res.capacities[i] < 1280) {
+        add('error', 'IPV6_MIN_OUTER', { v: res.capacities[i], i: i });
+        break;
+      }
+    }
+    if (res.anchor < 0 && res.innerMTU > 0 && !w.some(function (x) { return x.code === 'TUNNEL_EMPTY' || x.code === 'VXLAN_NEEDS_ETH'; })) add('info', 'NO_INNER_IP');
+    if (res.frameSize != null) {
+      var std = 1518 + layers.slice(0, res.l2len).filter(function (l) { return l.type === 'dot1q'; }).length * 4;
+      if (res.mtu <= 1500 && res.frameSize > Math.max(1522, std)) add('info', 'FRAME_OVERSIZE', { frame: res.frameSize });
+      if (res.mtu > 1500) add('info', 'JUMBO_PATH', { mtu: res.mtu, frame: res.frameSize });
+    }
+    layers.slice(0, res.l2len).forEach(function (l) {
+      if (l.type === 'macsec') add('info', 'MACSEC_FRAME', { bytes: l.opts.sci ? 32 : 24 });
+    });
+    return w;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reverse mode: smallest underlay MTU that yields at least `target` inner MTU
+  // ---------------------------------------------------------------------------
+  function requiredUnderlay(layers, target) {
+    layers = normalizeStack(layers);
+    target = clampInt(target, 0, 1000000, 1500);
+    var hi = 1000000;
+    if (innerInfo(layers, hi).innerMTU < target) return null;
+    var lo = 0;
+    while (lo < hi) {
+      var mid = Math.floor((lo + hi) / 2);
+      if (innerInfo(layers, mid).innerMTU >= target) hi = mid; else lo = mid + 1;
+    }
+    return lo;
+  }
+
+  // ---------------------------------------------------------------------------
+  // URL state  (#m=1500&s=eth_ipv4_esp.m-tunnel.c-aes-gcm_ipv4&mode=f&t=1500&lang=en)
+  // ---------------------------------------------------------------------------
+  function encodeLayer(l) {
+    var def = LAYERS[l.type];
+    var parts = [l.type];
+    def.opts.forEach(function (op) {
+      var v = l.opts[op.k];
+      if (String(v) !== String(op.def)) parts.push(op.k + '-' + v);
+    });
+    return parts.join('.');
+  }
+  function decodeLayer(str) {
+    var parts = String(str).split('.');
+    var type = parts.shift();
+    if (!LAYERS[type]) return null;
+    var opts = {};
+    parts.forEach(function (p) {
+      var dash = p.indexOf('-');
+      if (dash > 0) opts[p.slice(0, dash)] = p.slice(dash + 1);
+    });
+    return normalizeLayer({ type: type, opts: opts });
+  }
+  function encodeState(st) {
+    var q = [];
+    q.push('m=' + clampInt(st.mtu, 0, 1000000, 1500));
+    q.push('s=' + normalizeStack(st.layers).map(encodeLayer).join('_'));
+    if (st.mode === 'reverse') { q.push('mode=r'); q.push('t=' + clampInt(st.target, 0, 1000000, 1500)); }
+    if (st.probe != null && st.probe !== '') q.push('p=' + clampInt(st.probe, 0, 1000000, 0));
+    if (st.lang && st.lang !== 'en') q.push('lang=' + st.lang);
+    return '#' + q.join('&');
+  }
+  function decodeState(hash) {
+    var h = String(hash || '').replace(/^#/, '');
+    if (!h) return null;
+    var map = {};
+    h.split('&').forEach(function (kv) {
+      var i = kv.indexOf('=');
+      if (i > 0) { try { map[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) { /* ignore */ } }
+    });
+    if (!('s' in map) && !('m' in map)) return null;
+    var layers = (map.s || '').split('_').filter(Boolean).map(decodeLayer).filter(Boolean);
+    return {
+      mtu: clampInt(map.m, 0, 1000000, 1500),
+      layers: layers,
+      mode: map.mode === 'r' ? 'reverse' : 'forward',
+      target: clampInt(map.t, 0, 1000000, 1500),
+      probe: map.p != null && map.p !== '' ? clampInt(map.p, 0, 1000000, 0) : null,
+      lang: map.lang === 'de' ? 'de' : (map.lang === 'en' ? 'en' : null)
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Presets
+  // ---------------------------------------------------------------------------
+  function L(type, opts) { return { type: type, opts: opts || {} }; }
+  var PRESETS = [
+    { id: 'gre-ipsec', name: 'GRE over IPsec', mtu: 1500,
+      layers: [L('eth'), L('ipv4'), L('esp', { m: 'transport', c: 'aes-gcm', b: '256', i: 16 }), L('gre'), L('ipv4'), L('tcp')] },
+    { id: 'vxlan-evpn', name: 'VXLAN EVPN', mtu: 9216,
+      layers: [L('eth'), L('dot1q'), L('ipv4'), L('udp'), L('vxlan'), L('eth'), L('ipv4'), L('tcp')] },
+    { id: 'wg-pppoe', name: 'WireGuard over PPPoE', mtu: 1500,
+      layers: [L('eth'), L('pppoe'), L('ipv4'), L('udp'), L('wg'), L('ipv4'), L('tcp')] },
+    { id: 'mpls-l3vpn', name: 'MPLS L3VPN', mtu: 1500,
+      layers: [L('eth'), L('mpls', { n: 2 }), L('ipv4'), L('tcp')] },
+    { id: 'geneve', name: 'Geneve', mtu: 1600,
+      layers: [L('eth'), L('ipv4'), L('udp'), L('geneve', { o: 8 }), L('eth'), L('ipv4'), L('tcp')] },
+    { id: 'sdwan', name: 'SD-WAN style', mtu: 1500,
+      layers: [L('eth'), L('dot1q'), L('ipv4'), L('esp', { m: 'tunnel', n: 1, c: 'aes-gcm', b: '256', i: 16 }), L('ipv4'), L('tcp')] }
+  ];
+
+  return {
+    VERSION: '1.0.0',
+    REFS: REFS,
+    LAYERS: LAYERS,
+    FOLLOWS: FOLLOWS,
+    ESP_CIPHERS: ESP_CIPHERS,
+    ESP_INTEG: ESP_INTEG,
+    PRESETS: PRESETS,
+    L2_TYPES: L2_TYPES,
+    TUNNEL_TYPES: TUNNEL_TYPES,
+    espParams: espParams,
+    normalizeLayer: normalizeLayer,
+    normalizeStack: normalizeStack,
+    analyze: analyze,
+    requiredUnderlay: requiredUnderlay,
+    encodeState: encodeState,
+    decodeState: decodeState,
+    layerHeaderBytes: function (l, outerL2) { var s = staticSizes(normalizeLayer(l), { outerL2: !!outerL2, pad: 0 }); return s.h + s.t; }
+  };
+});
+
+</script>
+<script>
+/*!
+ * Encapsulation Calculator – configuration snippet generator
+ * Pure functions, no DOM. Only syntax that is documented by the vendor:
+ *   Cisco IOS  : ip mtu / ip tcp adjust-mss (500–1460) / ipv6 tcp adjust-mss (40–1940)
+ *                https://www.cisco.com/en/US/docs/ios-xml/ios/ipapp/command/iap-i2.html
+ *   Linux      : ip link (man ip-link), iptables TCPMSS (man iptables-extensions),
+ *                nftables "tcp option maxseg size set" (wiki.nftables.org, Mangling packet headers)
+ *   MikroTik   : /ip|/ipv6 firewall mangle action=change-mss new-mss tcp-mss tcp-flags
+ *                out-interface ipsec-policy (manual.mikrotik.com CLI reference 7.x)
+ *   Juniper    : family inet|inet6 mtu, media MTU incl. L2 header (14 B, +4 per tag),
+ *                set security flow tcp-mss all-tcp|gre-in|gre-out|ipsec-vpn mss (SRX)
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.EncapConfig = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var CONFIG_REFS = {
+    cisco: [
+      { t: 'Cisco IOS IP Application Services Command Reference – ip tcp adjust-mss / ipv6 tcp adjust-mss', u: 'https://www.cisco.com/en/US/docs/ios-xml/ios/ipapp/command/iap-i2.html' }
+    ],
+    linux: [
+      { t: 'ip-link(8)', u: 'https://man7.org/linux/man-pages/man8/ip-link.8.html' },
+      { t: 'iptables-extensions(8) – TCPMSS target', u: 'https://ipset.netfilter.org/iptables-extensions.man.html' },
+      { t: 'nftables wiki – Mangling packet headers (TCP MSS)', u: 'https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers' },
+      { t: 'wg-quick(8) – MTU', u: 'https://git.zx2c4.com/wireguard-tools/about/src/man/wg-quick.8' }
+    ],
+    mikrotik: [
+      { t: 'RouterOS CLI reference – /ip firewall mangle', u: 'https://manual.mikrotik.com/docs/7.25/cli-reference/ip/firewall/mangle/' },
+      { t: 'RouterOS CLI reference – /ipv6 firewall mangle', u: 'https://manual.mikrotik.com/docs/7.25/cli-reference/ipv6/firewall/mangle/' },
+      { t: 'RouterOS Mangle – Change MSS example', u: 'https://help.mikrotik.com/docs/display/ROS/Mangle' }
+    ],
+    juniper: [
+      { t: 'Junos – Media MTU (includes L2 header, excludes FCS)', u: 'https://juniper.net/documentation/us/en/software/junos/interfaces-fundamentals/topics/topic-map/media-mtu.html' },
+      { t: 'Junos – security flow tcp-mss (all-tcp, gre-in, gre-out, ipsec-vpn)', u: 'https://juniper.net/documentation/en_US/junos12.1x46/topics/reference/configuration-statement/security-edit-tcp-mss.html' }
+    ]
+  };
+
+  // The innermost "tunnel-ish" layer determines the interface the MTU goes on.
+  function primaryKind(res) {
+    var layers = res.layers;
+    var end = res.anchor >= 0 ? res.anchor : layers.length;
+    for (var i = end - 1; i >= res.l2len; i--) {
+      var t = layers[i].type;
+      if (t === 'gre' || t === 'esp' || t === 'wg' || t === 'vxlan' || t === 'geneve' || t === 'lisp' || t === 'pppoe' || t === 'mpls' || t === 'srv6') return t;
+      if (t === 'eth') continue; // inner Ethernet of VXLAN/Geneve
+    }
+    return 'plain';
+  }
+
+  function vlanTags(res) {
+    var n = 0;
+    res.layers.slice(0, res.l2len).forEach(function (l) { if (l.type === 'dot1q') n += 1; if (l.type === 'qinq') n += 2; });
+    return n;
+  }
+
+  function summary(res) {
+    return res.layers.map(function (l) { return l.type; }).join(' / ');
+  }
+
+  // ---------------------------------------------------------------- Cisco IOS
+  function cisco(res, ctx) {
+    var k = primaryKind(res), o = [];
+    var ifn = { gre: 'Tunnel0', esp: 'Tunnel0', pppoe: 'Dialer1' }[k];
+    o.push('! Encapsulation Calculator – ' + summary(res));
+    o.push('! Interface names are examples – adapt them to your device.');
+    if (ctx.showUnderlay) {
+      o.push('interface GigabitEthernet0/0');
+      o.push(' mtu ' + res.mtu);
+      o.push('!');
+    }
+    if (!ifn) {
+      if (k === 'wg') o.push('! Cisco IOS has no WireGuard – clamp the MSS on the LAN-facing interface.');
+      else if (k === 'vxlan' || k === 'geneve' || k === 'lisp' || k === 'mpls' || k === 'srv6') o.push('! ' + k.toUpperCase() + ': set the underlay MTU on the core links; clamp MSS on the inner L3 interface.');
+      ifn = 'GigabitEthernet0/1';
+      o.push('interface ' + ifn + '   ! inner / LAN-facing interface');
+    } else {
+      o.push('interface ' + ifn);
+      o.push(' ip mtu ' + res.innerMTU);
+    }
+    if (res.mssV4 >= 500 && res.mssV4 <= 1460) o.push(' ip tcp adjust-mss ' + res.mssV4);
+    else o.push(' ! ip tcp adjust-mss accepts 500–1460 – computed IPv4 MSS ' + res.mssV4 + ' is outside that range');
+    if (res.innerMTU >= 1280) {
+      if (ifn.indexOf('Tunnel') === 0 || ifn.indexOf('Dialer') === 0) o.push(' ipv6 mtu ' + res.innerMTU);
+      if (res.mssV6 >= 40 && res.mssV6 <= 1940) o.push(' ipv6 tcp adjust-mss ' + res.mssV6);
+      else o.push(' ! ipv6 tcp adjust-mss accepts 40–1940 – computed IPv6 MSS ' + res.mssV6 + ' is outside that range');
+    } else {
+      o.push(' ! inner MTU < 1280: IPv6 cannot be carried (RFC 8200)');
+    }
+    return o.join('\n');
+  }
+
+  // -------------------------------------------------------------------- Linux
+  function linux(res, ctx) {
+    var k = primaryKind(res), o = [];
+    var dev = { gre: 'gre1', esp: 'vti0', wg: 'wg0', vxlan: 'vxlan0', geneve: 'geneve0', pppoe: 'ppp0' }[k] || 'tun0';
+    o.push('# Encapsulation Calculator – ' + summary(res));
+    o.push('# Device names are examples – adapt them.');
+    if (ctx.showUnderlay) o.push('ip link set dev eth0 mtu ' + res.mtu + '        # underlay');
+    if (k === 'esp') o.push('# policy-based IPsec has no tunnel device: skip the next line, keep the MSS rules');
+    o.push('ip link set dev ' + dev + ' mtu ' + res.innerMTU);
+    if (k === 'wg') o.push('# or in wg-quick ' + dev + '.conf, section [Interface]:  MTU = ' + res.innerMTU);
+    o.push('');
+    o.push('# MSS clamping – iptables / ip6tables');
+    o.push('iptables  -t mangle -A FORWARD -o ' + dev + ' -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss ' + res.mssV4);
+    if (res.innerMTU >= 1280) o.push('ip6tables -t mangle -A FORWARD -o ' + dev + ' -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss ' + res.mssV6);
+    o.push('');
+    o.push('# MSS clamping – nftables');
+    o.push('nft add table inet mssfix');
+    o.push("nft add chain inet mssfix forward '{ type filter hook forward priority mangle; }'");
+    o.push('nft add rule inet mssfix forward oifname "' + dev + '" meta nfproto ipv4 tcp flags syn tcp option maxseg size set ' + res.mssV4);
+    if (res.innerMTU >= 1280) o.push('nft add rule inet mssfix forward oifname "' + dev + '" meta nfproto ipv6 tcp flags syn tcp option maxseg size set ' + res.mssV6);
+    return o.join('\n');
+  }
+
+  // ----------------------------------------------------------------- MikroTik
+  function mikrotik(res, ctx) {
+    var k = primaryKind(res), o = [];
+    var map = {
+      gre:   ['/interface gre set gre-tunnel1 mtu=' + res.innerMTU, 'gre-tunnel1'],
+      wg:    ['/interface wireguard set wireguard1 mtu=' + res.innerMTU, 'wireguard1'],
+      vxlan: ['/interface vxlan set vxlan1 mtu=' + res.innerMTU, 'vxlan1'],
+      pppoe: ['/interface pppoe-client set pppoe-out1 max-mtu=' + res.innerMTU + ' max-mru=' + res.innerMTU, 'pppoe-out1']
+    };
+    o.push('# Encapsulation Calculator – ' + summary(res));
+    o.push('# Interface names are examples – adapt them.');
+    if (ctx.showUnderlay) o.push('/interface ethernet set ether1 mtu=' + res.mtu + '   # underlay (check l2mtu)');
+    var match;
+    if (map[k]) { o.push(map[k][0]); match = 'out-interface=' + map[k][1]; }
+    else if (k === 'esp') { o.push('# IPsec (policy-based): no tunnel interface – match on the IPsec policy'); match = 'ipsec-policy=out,ipsec'; }
+    else { o.push('# no RouterOS interface MTU line for this stack – MSS clamp only'); match = 'out-interface=ether1'; }
+    o.push('/ip firewall mangle add chain=forward ' + match + ' protocol=tcp tcp-flags=syn tcp-mss=' + (res.mssV4 + 1) + '-65535 action=change-mss new-mss=' + res.mssV4 + ' passthrough=yes');
+    if (res.innerMTU >= 1280) o.push('/ipv6 firewall mangle add chain=forward ' + match + ' protocol=tcp tcp-flags=syn tcp-mss=' + (res.mssV6 + 1) + '-65535 action=change-mss new-mss=' + res.mssV6 + ' passthrough=yes');
+    return o.join('\n');
+  }
+
+  // ------------------------------------------------------------------ Juniper
+  function juniper(res, ctx) {
+    var k = primaryKind(res), o = [];
+    var ifl = { gre: 'gr-0/0/0', esp: 'st0', pppoe: 'pp0' }[k];
+    o.push('# Encapsulation Calculator – ' + summary(res));
+    o.push('# Interface names are examples – adapt them.');
+    if (ctx.showUnderlay) {
+      var tags = vlanTags(res);
+      o.push('# media MTU includes the 14-byte Ethernet header' + (tags ? ' + ' + (4 * tags) + ' bytes VLAN tags' : '') + ' (no FCS)');
+      o.push('set interfaces ge-0/0/0 mtu ' + (res.mtu + 14 + 4 * tags));
+    }
+    if (ifl) {
+      o.push('set interfaces ' + ifl + ' unit 0 family inet mtu ' + res.innerMTU);
+      if (res.innerMTU >= 1280) o.push('set interfaces ' + ifl + ' unit 0 family inet6 mtu ' + res.innerMTU);
+    } else if (k === 'wg') {
+      o.push('# Junos has no WireGuard – MSS clamp only');
+    } else {
+      o.push('# ' + (k === 'plain' ? 'plain IP' : k.toUpperCase()) + ': no tunnel interface MTU – MSS clamp only');
+    }
+    var mss = res.innerFamily === 'ipv6' ? res.mssV6 : res.mssV4;
+    o.push('# SRX flow mode: TCP MSS of SYN packets');
+    if (k === 'gre') {
+      o.push('set security flow tcp-mss gre-in mss ' + mss);
+      o.push('set security flow tcp-mss gre-out mss ' + mss);
+    } else if (k === 'esp') {
+      o.push('set security flow tcp-mss ipsec-vpn mss ' + mss);
+    } else {
+      o.push('set security flow tcp-mss all-tcp mss ' + mss);
+    }
+    return o.join('\n');
+  }
+
+  function generate(res, opts) {
+    opts = opts || {};
+    var ctx = { showUnderlay: opts.reverse || res.mtu !== 1500 };
+    if (res.innerMTU <= 0) {
+      var msg = '# No valid result – fix the stack first.';
+      return { cisco: msg.replace('#', '!'), linux: msg, mikrotik: msg, juniper: msg };
+    }
+    return { cisco: cisco(res, ctx), linux: linux(res, ctx), mikrotik: mikrotik(res, ctx), juniper: juniper(res, ctx) };
+  }
+
+  return { generate: generate, primaryKind: primaryKind, CONFIG_REFS: CONFIG_REFS };
+});
+
+</script>
+<script>
+/* Encapsulation Calculator – UI strings (EN / DE) */
+(function (root) {
+  'use strict';
+  var T = {
+    en: {
+      title: 'Encapsulation Calculator',
+      tagline: 'Byte-exact MTU & MSS for tunnels, VPNs and overlays',
+      skip: 'Skip to results',
+      palette: 'Layers',
+      paletteHint: 'Drag into the stack, or press Enter / tap to append.',
+      examples: 'Examples',
+      stack: 'Packet stack',
+      stackHint: 'Outermost header first. Drag ⠿ to reorder, Alt+↑/↓ with the keyboard, Delete to remove.',
+      stackEmpty: 'Drop layers here – or tap a layer on the left.',
+      clear: 'Clear',
+      outerL2: 'frame only',
+      inMtu: 'in MTU',
+      innerTag: 'inner IP',
+      noOpts: 'no options',
+      options: 'Options',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      remove: 'Remove',
+      dropRemove: 'Release to remove',
+      mode: 'Mode',
+      modeForward: 'Underlay → Inner',
+      modeReverse: 'Inner → Underlay',
+      underlayMtu: 'Underlay MTU',
+      underlayHint: 'L3 MTU of the physical link (Ethernet payload). The outer Ethernet header is not part of it.',
+      targetMtu: 'Desired inner MTU',
+      targetHint: 'The tool finds the smallest underlay MTU that delivers this inner MTU.',
+      results: 'Results',
+      overhead: 'Total overhead',
+      innerMtu: 'Inner MTU',
+      innerMtuSub: 'effective L3 MTU inside',
+      mssV4: 'TCP MSS IPv4',
+      mssV6: 'TCP MSS IPv6',
+      mssSub: 'MTU − {n} B',
+      frame: 'Frame size',
+      frameSub: 'L2 incl. FCS · {w} B on the wire',
+      noFrame: 'no outer Ethernet',
+      required: 'Required underlay MTU',
+      requiredSub: 'smallest MTU for {t} B inside',
+      impossible: 'not reachable',
+      tsNote: 'With TCP timestamps each segment carries {n} B of data.',
+      bytes: 'B',
+      layout: 'Byte layout',
+      layoutFrame: 'Whole frame to scale',
+      layoutHeaders: 'Headers & trailers to scale (1 byte = {u} px)',
+      payloadNotToScale: 'payload {n} B · not to scale',
+      encrypted: 'encrypted',
+      probe: 'Inner packet size',
+      probeMax: 'max',
+      probeHint: 'Smaller packets show how ESP and WireGuard padding changes.',
+      showTable: 'Show fields as table',
+      tOffset: 'Offset',
+      tBytes: 'Bytes',
+      tLayer: 'Layer',
+      tField: 'Field',
+      warnings: 'Checks',
+      allGood: 'Stack looks valid.',
+      config: 'Configuration',
+      configHint: 'Copy-paste snippets for the computed values. Interface names are placeholders.',
+      copy: 'Copy',
+      copied: 'Copied',
+      share: 'Share',
+      shareCopied: 'Link copied – the whole state is in the URL.',
+      sources: 'Sources',
+      sourcesHint: 'Every byte count is taken from these documents.',
+      theme: 'Toggle dark / light mode',
+      lang: 'Sprache: Deutsch',
+      footer: 'Runs fully offline · no tracking · no cookies · MIT licence',
+      added: '{layer} added at position {pos} of {n}.',
+      moved: '{layer} moved to position {pos} of {n}.',
+      removed: '{layer} removed.',
+      presetLoaded: 'Example “{name}” loaded.',
+      position: 'Position {pos} of {n}',
+      fieldAria: '{layer}, {field}: {bytes} bytes at offset {off}',
+      dragHandle: 'Drag to reorder {layer}',
+      summaryBar: 'Inner MTU {mtu} · MSS {v4} / {v6}',
+      opt: {
+        sci: 'Explicit SCI (+8 B)',
+        n_mpls: 'Labels',
+        o_ipv4: 'Options (B)',
+        n_srv6: 'Segments (SIDs)',
+        r: 'Reduced encap (H.Encaps.Red)',
+        ts: 'Timestamps option (+12 B)',
+        c_gre: 'Checksum (+4 B)',
+        k: 'Key (+4 B)',
+        s: 'Sequence (+4 B)',
+        o_geneve: 'Options length (B)',
+        m: 'Mode',
+        n_esp: 'NAT-T / UDP 4500 (+8 B)',
+        c_esp: 'Cipher',
+        b: 'Key length',
+        i: 'ICV length',
+        a: 'Integrity',
+        tunnel: 'Tunnel', transport: 'Transport',
+        outerFrom: 'Outer header: {v} (from stack)'
+      },
+      groups: { l2: 'Layer 2', shim: 'Shim', l3: 'Network', l4: 'Transport', tunnel: 'Tunnels', sec: 'Security' },
+      presetDesc: {
+        'gre-ipsec': 'GRE inside ESP transport mode, AES-256-GCM',
+        'vxlan-evpn': 'VXLAN fabric on a 9216 jumbo underlay, tagged',
+        'wg-pppoe': 'WireGuard home/branch link on DSL',
+        'mpls-l3vpn': 'Transport + VPN label',
+        geneve: 'Geneve with one 8-byte option TLV, 1600 underlay',
+        sdwan: 'IPsec tunnel, NAT-T, AES-256-GCM over a VLAN uplink'
+      },
+      layerDesc: {
+        eth: 'Ethernet II. As the first layer it forms the frame (14 B + 4 B FCS, not in the MTU). Inside VXLAN/Geneve it is 14 B without FCS.',
+        dot1q: 'One VLAN tag (4 B). Adds to the frame, not to the L3 MTU.',
+        qinq: 'Provider S-tag + customer C-tag (8 B).',
+        macsec: 'IEEE 802.1AE: SecTAG 8 B (16 B with SCI) + 16 B ICV, added to the frame.',
+        pppoe: 'PPPoE session header + PPP protocol ID: 8 B inside the Ethernet payload.',
+        mpls: '4 B per label stack entry.',
+        ipv4: '20 B header plus 0–40 B options.',
+        ipv6: '40 B fixed header. Links must carry at least 1280 B.',
+        srv6: 'Segment Routing Header: 8 B + 16 B per SID. Place it after the outer IPv6.',
+        udp: '8 B header.',
+        tcp: '20 B header. Timestamps add 12 B per segment.',
+        gre: '4 B base header; checksum, key and sequence add 4 B each.',
+        vxlan: '8 B header over UDP 4789; must carry an inner Ethernet frame.',
+        geneve: '8 B header + variable options over UDP 6081.',
+        lisp: '8 B header over UDP 4341; carries IP.',
+        esp: 'ESP header 8 B + IV, trailer 2 B + padding + ICV. Padding aligns to the cipher block (CBC 16 B, GCM/ChaCha20 4 B).',
+        wg: '16 B header + 16 B Poly1305 tag over UDP. Payload padded to 16 B, capped at the interface MTU.'
+      },
+      warn: {
+        EMPTY: 'The stack is empty. Add layers or load an example.',
+        UNDERLAY_TOO_SMALL: 'Underlay MTU {mtu} is below the IPv4 minimum of 68 bytes (RFC 791).',
+        UNDERLAY_TOO_BIG: 'Underlay MTU {mtu} exceeds the 65535-byte IP packet limit.',
+        BAD_START: '{layer} cannot be the outermost layer. Start with Ethernet (or an IP/MPLS header for a non-Ethernet link).',
+        BAD_ORDER: '{layer} cannot directly follow {prev} (layer {pos}).',
+        ESP_USE_NATT: 'ESP directly after UDP: remove the UDP layer and enable the NAT-T option of ESP instead.',
+        VXLAN_NEEDS_ETH: 'VXLAN carries Ethernet frames (RFC 7348): add an inner Ethernet layer directly after VXLAN.',
+        LISP_ETH: 'LISP (RFC 9300) carries IP packets, not Ethernet frames.',
+        AFTER_TCP: 'Nothing can follow TCP – it is the innermost header.',
+        ESP_TUNNEL_NEEDS_IP: 'ESP in tunnel mode must carry an IP packet. Use transport mode for GRE-over-IPsec.',
+        ESP_TRANSPORT_IP: 'ESP transport mode carrying an IP header is effectively tunnel mode – check the mode.',
+        GCM_SHORT_ICV: 'AES-GCM with a {icv}-byte ICV is allowed but not recommended (RFC 8221 requires the 16-byte ICV).',
+        SHA1: 'HMAC-SHA-1-96 is legacy; prefer HMAC-SHA-256-128 or an AEAD cipher (RFC 8221).',
+        TUNNEL_EMPTY: '{layer} carries nothing yet – the result is the raw payload capacity. Add the inner header.',
+        MACSEC_INNER: 'MACsec is a hop-by-hop L2 protocol; it normally sits directly after the outer Ethernet header.',
+        PPPOE_BABY_JUMBO: 'PPPoE above 1492 needs RFC 4638 (PPP-Max-Payload) support on both ends and a 1508+ byte Ethernet underlay.',
+        SRV6_NO_SRH: 'Reduced encapsulation with a single SID needs no SRH at all (RFC 8986).',
+        DUP_ETH: 'A second Ethernet header in the outer L2 group makes no sense – VLAN tags are separate layers.',
+        NO_CAPACITY: 'No room left for a payload ({v} B). Raise the underlay MTU or remove layers.',
+        IPV6_MIN: 'Inner MTU {v} B is below 1280 B: IPv6 requires every link to carry 1280 B (RFC 8200 §5). IPv6 will break.',
+        IPV6_MIN_OUTER: 'An IPv6 header in the stack has only {v} B available – IPv6 needs at least 1280 B (RFC 8200).',
+        IPV4_MIN68: 'Inner MTU {v} B is below the IPv4 minimum of 68 bytes (RFC 791).',
+        IPV4_MIN: 'Inner MTU {v} B is below 576 B – the datagram size every IPv4 host must accept (RFC 791). Expect breakage.',
+        NO_IPV6_INSIDE: 'Inner MTU {v} B is below 1280 B, so this tunnel cannot carry IPv6.',
+        NO_INNER_IP: 'No inner IP header found – the result is the payload capacity of the innermost layer.',
+        FRAME_OVERSIZE: 'The frame grows to {frame} B – above the 1522-byte 802.1Q maximum. Every switch on the path must accept larger frames.',
+        JUMBO_PATH: 'Underlay MTU {mtu} B (frame {frame} B): every link and switch on the path must support it, or PMTUD has to work end-to-end.',
+        MACSEC_FRAME: 'MACsec adds {bytes} B per frame. Either the links carry the larger frames, or the L3 MTU must shrink by {bytes} B.'
+      }
+    },
+    de: {
+      title: 'Encapsulation Calculator',
+      tagline: 'Byte-genaue MTU & MSS für Tunnel, VPNs und Overlays',
+      skip: 'Zu den Ergebnissen springen',
+      palette: 'Layer',
+      paletteHint: 'In den Stack ziehen oder mit Enter / Tippen anhängen.',
+      examples: 'Beispiele',
+      stack: 'Paket-Stack',
+      stackHint: 'Äußerster Header zuerst. Mit ⠿ ziehen, per Tastatur Alt+↑/↓ zum Verschieben, Entf zum Entfernen.',
+      stackEmpty: 'Layer hier ablegen – oder links auf einen Layer tippen.',
+      clear: 'Leeren',
+      outerL2: 'nur Frame',
+      inMtu: 'in der MTU',
+      innerTag: 'inneres IP',
+      noOpts: 'ohne Optionen',
+      options: 'Optionen',
+      moveUp: 'Nach oben',
+      moveDown: 'Nach unten',
+      remove: 'Entfernen',
+      dropRemove: 'Loslassen zum Entfernen',
+      mode: 'Modus',
+      modeForward: 'Underlay → Inner',
+      modeReverse: 'Inner → Underlay',
+      underlayMtu: 'Underlay-MTU',
+      underlayHint: 'L3-MTU des physischen Links (Ethernet-Payload). Der äußere Ethernet-Header zählt nicht dazu.',
+      targetMtu: 'Gewünschte Inner-MTU',
+      targetHint: 'Das Tool sucht die kleinste Underlay-MTU, die diese Inner-MTU liefert.',
+      results: 'Ergebnisse',
+      overhead: 'Gesamt-Overhead',
+      innerMtu: 'Inner-MTU',
+      innerMtuSub: 'effektive L3-MTU innen',
+      mssV4: 'TCP-MSS IPv4',
+      mssV6: 'TCP-MSS IPv6',
+      mssSub: 'MTU − {n} B',
+      frame: 'Frame-Größe',
+      frameSub: 'L2 inkl. FCS · {w} B auf dem Kabel',
+      noFrame: 'kein äußeres Ethernet',
+      required: 'Nötige Underlay-MTU',
+      requiredSub: 'kleinste MTU für {t} B innen',
+      impossible: 'nicht erreichbar',
+      tsNote: 'Mit TCP-Timestamps trägt jedes Segment {n} B Nutzdaten.',
+      bytes: 'B',
+      layout: 'Byte-Layout',
+      layoutFrame: 'Gesamter Frame maßstabsgetreu',
+      layoutHeaders: 'Header & Trailer maßstabsgetreu (1 Byte = {u} px)',
+      payloadNotToScale: 'Payload {n} B · nicht maßstäblich',
+      encrypted: 'verschlüsselt',
+      probe: 'Größe des inneren Pakets',
+      probeMax: 'max.',
+      probeHint: 'Kleinere Pakete zeigen, wie sich das Padding bei ESP und WireGuard ändert.',
+      showTable: 'Felder als Tabelle zeigen',
+      tOffset: 'Offset',
+      tBytes: 'Bytes',
+      tLayer: 'Layer',
+      tField: 'Feld',
+      warnings: 'Prüfungen',
+      allGood: 'Der Stack ist gültig.',
+      config: 'Konfiguration',
+      configHint: 'Copy-Paste-Snippets mit den berechneten Werten. Interface-Namen sind Platzhalter.',
+      copy: 'Kopieren',
+      copied: 'Kopiert',
+      share: 'Teilen',
+      shareCopied: 'Link kopiert – der komplette Zustand steckt in der URL.',
+      sources: 'Quellen',
+      sourcesHint: 'Jeder Byte-Wert stammt aus diesen Dokumenten.',
+      theme: 'Dark / Light Mode umschalten',
+      lang: 'Language: English',
+      footer: 'Läuft komplett offline · kein Tracking · keine Cookies · MIT-Lizenz',
+      added: '{layer} an Position {pos} von {n} hinzugefügt.',
+      moved: '{layer} an Position {pos} von {n} verschoben.',
+      removed: '{layer} entfernt.',
+      presetLoaded: 'Beispiel „{name}“ geladen.',
+      position: 'Position {pos} von {n}',
+      fieldAria: '{layer}, {field}: {bytes} Bytes ab Offset {off}',
+      dragHandle: '{layer} zum Umsortieren ziehen',
+      summaryBar: 'Inner-MTU {mtu} · MSS {v4} / {v6}',
+      opt: {
+        sci: 'Explizite SCI (+8 B)',
+        n_mpls: 'Labels',
+        o_ipv4: 'Options (B)',
+        n_srv6: 'Segmente (SIDs)',
+        r: 'Reduzierte Encap (H.Encaps.Red)',
+        ts: 'Timestamps-Option (+12 B)',
+        c_gre: 'Checksum (+4 B)',
+        k: 'Key (+4 B)',
+        s: 'Sequence (+4 B)',
+        o_geneve: 'Options-Länge (B)',
+        m: 'Modus',
+        n_esp: 'NAT-T / UDP 4500 (+8 B)',
+        c_esp: 'Cipher',
+        b: 'Schlüssellänge',
+        i: 'ICV-Länge',
+        a: 'Integrität',
+        tunnel: 'Tunnel', transport: 'Transport',
+        outerFrom: 'Outer-Header: {v} (aus dem Stack)'
+      },
+      groups: { l2: 'Layer 2', shim: 'Shim', l3: 'Netzwerk', l4: 'Transport', tunnel: 'Tunnel', sec: 'Sicherheit' },
+      presetDesc: {
+        'gre-ipsec': 'GRE in ESP-Transportmodus, AES-256-GCM',
+        'vxlan-evpn': 'VXLAN-Fabric auf 9216-Jumbo-Underlay, getaggt',
+        'wg-pppoe': 'WireGuard-Heim-/Filiallink über DSL',
+        'mpls-l3vpn': 'Transport- + VPN-Label',
+        geneve: 'Geneve mit einer 8-Byte-Option, Underlay 1600',
+        sdwan: 'IPsec-Tunnel, NAT-T, AES-256-GCM über VLAN-Uplink'
+      },
+      layerDesc: {
+        eth: 'Ethernet II. Als erster Layer bildet es den Frame (14 B + 4 B FCS, nicht in der MTU). In VXLAN/Geneve 14 B ohne FCS.',
+        dot1q: 'Ein VLAN-Tag (4 B). Vergrößert den Frame, nicht die L3-MTU.',
+        qinq: 'Provider-S-Tag + Kunden-C-Tag (8 B).',
+        macsec: 'IEEE 802.1AE: SecTAG 8 B (16 B mit SCI) + 16 B ICV, kommt zum Frame hinzu.',
+        pppoe: 'PPPoE-Session-Header + PPP-Protokoll-ID: 8 B in der Ethernet-Payload.',
+        mpls: '4 B pro Label-Stack-Eintrag.',
+        ipv4: '20 B Header plus 0–40 B Options.',
+        ipv6: '40 B fester Header. Links müssen mindestens 1280 B tragen.',
+        srv6: 'Segment Routing Header: 8 B + 16 B pro SID. Nach dem äußeren IPv6 einsetzen.',
+        udp: '8 B Header.',
+        tcp: '20 B Header. Timestamps kosten 12 B pro Segment.',
+        gre: '4 B Basis-Header; Checksum, Key und Sequence je 4 B.',
+        vxlan: '8 B Header über UDP 4789; muss ein inneres Ethernet-Frame tragen.',
+        geneve: '8 B Header + variable Options über UDP 6081.',
+        lisp: '8 B Header über UDP 4341; transportiert IP.',
+        esp: 'ESP-Header 8 B + IV, Trailer 2 B + Padding + ICV. Padding richtet auf den Cipher-Block aus (CBC 16 B, GCM/ChaCha20 4 B).',
+        wg: '16 B Header + 16 B Poly1305-Tag über UDP. Payload auf 16 B aufgefüllt, begrenzt durch die Interface-MTU.'
+      },
+      warn: {
+        EMPTY: 'Der Stack ist leer. Füge Layer hinzu oder lade ein Beispiel.',
+        UNDERLAY_TOO_SMALL: 'Underlay-MTU {mtu} liegt unter dem IPv4-Minimum von 68 Byte (RFC 791).',
+        UNDERLAY_TOO_BIG: 'Underlay-MTU {mtu} überschreitet die IP-Paketgrenze von 65535 Byte.',
+        BAD_START: '{layer} kann nicht der äußerste Layer sein. Beginne mit Ethernet (oder IP/MPLS bei einem Nicht-Ethernet-Link).',
+        BAD_ORDER: '{layer} kann nicht direkt auf {prev} folgen (Layer {pos}).',
+        ESP_USE_NATT: 'ESP direkt nach UDP: Entferne den UDP-Layer und aktiviere stattdessen die NAT-T-Option von ESP.',
+        VXLAN_NEEDS_ETH: 'VXLAN transportiert Ethernet-Frames (RFC 7348): Füge direkt nach VXLAN einen inneren Ethernet-Layer ein.',
+        LISP_ETH: 'LISP (RFC 9300) transportiert IP-Pakete, keine Ethernet-Frames.',
+        AFTER_TCP: 'Nach TCP kann nichts folgen – es ist der innerste Header.',
+        ESP_TUNNEL_NEEDS_IP: 'ESP im Tunnelmodus muss ein IP-Paket tragen. Für GRE-over-IPsec den Transportmodus wählen.',
+        ESP_TRANSPORT_IP: 'ESP-Transportmodus mit innerem IP-Header ist faktisch Tunnelmodus – Modus prüfen.',
+        GCM_SHORT_ICV: 'AES-GCM mit {icv}-Byte-ICV ist erlaubt, aber nicht empfohlen (RFC 8221 verlangt 16 Byte).',
+        SHA1: 'HMAC-SHA-1-96 ist veraltet; besser HMAC-SHA-256-128 oder ein AEAD-Cipher (RFC 8221).',
+        TUNNEL_EMPTY: '{layer} trägt noch nichts – das Ergebnis ist die reine Payload-Kapazität. Füge den inneren Header hinzu.',
+        MACSEC_INNER: 'MACsec ist ein Hop-by-Hop-L2-Protokoll und sitzt normalerweise direkt nach dem äußeren Ethernet-Header.',
+        PPPOE_BABY_JUMBO: 'PPPoE über 1492 braucht RFC-4638-Unterstützung (PPP-Max-Payload) auf beiden Seiten und ein Ethernet-Underlay ab 1508 Byte.',
+        SRV6_NO_SRH: 'Reduzierte Encapsulation mit nur einer SID braucht gar keinen SRH (RFC 8986).',
+        DUP_ETH: 'Ein zweiter Ethernet-Header in der äußeren L2-Gruppe ergibt keinen Sinn – VLAN-Tags sind eigene Layer.',
+        NO_CAPACITY: 'Kein Platz mehr für Payload ({v} B). Underlay-MTU erhöhen oder Layer entfernen.',
+        IPV6_MIN: 'Inner-MTU {v} B liegt unter 1280 B: IPv6 verlangt mindestens 1280 B pro Link (RFC 8200 §5). IPv6 funktioniert so nicht.',
+        IPV6_MIN_OUTER: 'Für einen IPv6-Header im Stack bleiben nur {v} B – IPv6 braucht mindestens 1280 B (RFC 8200).',
+        IPV4_MIN68: 'Inner-MTU {v} B liegt unter dem IPv4-Minimum von 68 Byte (RFC 791).',
+        IPV4_MIN: 'Inner-MTU {v} B liegt unter 576 B – der Datagramm-Größe, die jeder IPv4-Host annehmen muss (RFC 791). Probleme sind zu erwarten.',
+        NO_IPV6_INSIDE: 'Inner-MTU {v} B liegt unter 1280 B, dieser Tunnel kann also kein IPv6 transportieren.',
+        NO_INNER_IP: 'Kein innerer IP-Header gefunden – das Ergebnis ist die Payload-Kapazität des innersten Layers.',
+        FRAME_OVERSIZE: 'Der Frame wächst auf {frame} B – über das 802.1Q-Maximum von 1522 Byte. Jeder Switch im Pfad muss größere Frames akzeptieren.',
+        JUMBO_PATH: 'Underlay-MTU {mtu} B (Frame {frame} B): Jeder Link und Switch im Pfad muss das unterstützen, sonst muss PMTUD durchgängig funktionieren.',
+        MACSEC_FRAME: 'MACsec fügt pro Frame {bytes} B hinzu. Entweder tragen die Links die größeren Frames, oder die L3-MTU muss um {bytes} B sinken.'
+      }
+    }
+  };
+
+  // Header field descriptions: key -> [en, de]
+  var FIELDS = {
+    dst: ['Destination MAC address', 'Ziel-MAC-Adresse'],
+    src: ['Source MAC address', 'Quell-MAC-Adresse'],
+    ethertype: ['Type of the next header (0x0800 IPv4, 0x86DD IPv6, 0x8847 MPLS …)', 'Typ des nächsten Headers (0x0800 IPv4, 0x86DD IPv6, 0x8847 MPLS …)'],
+    fcs: ['Frame Check Sequence (CRC-32), only on the physical frame', 'Frame Check Sequence (CRC-32), nur am physischen Frame'],
+    tpid: ['Tag Protocol Identifier 0x8100 (C-tag)', 'Tag Protocol Identifier 0x8100 (C-Tag)'],
+    stpid: ['Tag Protocol Identifier 0x88A8 (802.1ad S-tag)', 'Tag Protocol Identifier 0x88A8 (802.1ad S-Tag)'],
+    tci: ['Priority (PCP 3 bit), DEI (1 bit), VLAN ID (12 bit)', 'Priorität (PCP 3 Bit), DEI (1 Bit), VLAN-ID (12 Bit)'],
+    macsecet: ['MACsec EtherType 0x88E5 – start of the SecTAG', 'MACsec-EtherType 0x88E5 – Beginn des SecTAG'],
+    tcian: ['Tag Control Information and Association Number', 'Tag Control Information und Association Number'],
+    sl: ['Short Length: payload length for short frames', 'Short Length: Payload-Länge bei kurzen Frames'],
+    pn: ['Packet Number – replay protection and part of the GCM nonce', 'Packet Number – Replay-Schutz und Teil der GCM-Nonce'],
+    sci: ['Secure Channel Identifier (optional, 8 B)', 'Secure Channel Identifier (optional, 8 B)'],
+    micv: ['Integrity Check Value, 16 B for GCM-AES', 'Integrity Check Value, 16 B bei GCM-AES'],
+    pppver: ['PPPoE version and type (both 1)', 'PPPoE-Version und -Typ (beide 1)'],
+    pppcode: ['Code 0x00 for session data', 'Code 0x00 für Session-Daten'],
+    pppsess: ['PPPoE session ID', 'PPPoE-Session-ID'],
+    ppplen: ['Length of the PPPoE payload', 'Länge der PPPoE-Payload'],
+    pppproto: ['PPP Protocol ID (0x0021 IPv4, 0x0057 IPv6)', 'PPP-Protokoll-ID (0x0021 IPv4, 0x0057 IPv6)'],
+    label: ['Label (20 bit), Traffic Class (3), Bottom-of-Stack (1), TTL (8)', 'Label (20 Bit), Traffic Class (3), Bottom-of-Stack (1), TTL (8)'],
+    verihl: ['Version (4) and header length in 32-bit words', 'Version (4) und Header-Länge in 32-Bit-Worten'],
+    dscp: ['DSCP (QoS) and ECN', 'DSCP (QoS) und ECN'],
+    totlen: ['Total packet length incl. header', 'Gesamtlänge des Pakets inkl. Header'],
+    ident: ['Identification for fragment reassembly', 'Identifikation für das Zusammensetzen von Fragmenten'],
+    frag: ['DF/MF flags and fragment offset', 'DF/MF-Flags und Fragment-Offset'],
+    ttl: ['Time to Live', 'Time to Live'],
+    proto: ['Next protocol (6 TCP, 17 UDP, 47 GRE, 50 ESP …)', 'Nächstes Protokoll (6 TCP, 17 UDP, 47 GRE, 50 ESP …)'],
+    csum: ['Header checksum', 'Header-Prüfsumme'],
+    src4: ['Source IPv4 address', 'Quell-IPv4-Adresse'],
+    dst4: ['Destination IPv4 address', 'Ziel-IPv4-Adresse'],
+    ipopt: ['IPv4 options, padded to 32-bit words (max. 40 B)', 'IPv4-Options, auf 32-Bit-Worte aufgefüllt (max. 40 B)'],
+    v6first: ['Version, Traffic Class, Flow Label', 'Version, Traffic Class, Flow Label'],
+    plen: ['Payload length (without the 40 B header)', 'Payload-Länge (ohne die 40 B Header)'],
+    nh: ['Next Header (protocol of the following header)', 'Next Header (Protokoll des folgenden Headers)'],
+    hop: ['Hop Limit', 'Hop Limit'],
+    src6: ['Source IPv6 address', 'Quell-IPv6-Adresse'],
+    dst6: ['Destination IPv6 address (in SRv6: the active SID)', 'Ziel-IPv6-Adresse (bei SRv6: die aktive SID)'],
+    hel: ['Header length in 8-byte units, excluding the first 8 B', 'Header-Länge in 8-Byte-Einheiten, ohne die ersten 8 B'],
+    rtype: ['Routing Type 4 = Segment Routing Header', 'Routing Type 4 = Segment Routing Header'],
+    sl6: ['Segments Left', 'Segments Left'],
+    le: ['Index of the last element of the segment list', 'Index des letzten Eintrags der Segment-Liste'],
+    flags: ['Flags', 'Flags'],
+    tag: ['Tag for grouping packets', 'Tag zum Gruppieren von Paketen'],
+    sid: ['Segment ID – a 128-bit IPv6 address', 'Segment-ID – eine 128-Bit-IPv6-Adresse'],
+    sport: ['Source port', 'Quell-Port'],
+    dport: ['Destination port', 'Ziel-Port'],
+    ulen: ['UDP length incl. header', 'UDP-Länge inkl. Header'],
+    ucsum: ['UDP checksum', 'UDP-Prüfsumme'],
+    seq: ['Sequence number', 'Sequenznummer'],
+    ack: ['Acknowledgment number', 'Bestätigungsnummer'],
+    tflags: ['Data offset and control flags (SYN, ACK …)', 'Data Offset und Steuer-Flags (SYN, ACK …)'],
+    win: ['Receive window', 'Empfangsfenster'],
+    tcsum: ['TCP checksum', 'TCP-Prüfsumme'],
+    urg: ['Urgent pointer', 'Urgent Pointer'],
+    nop: ['Two NOP options to align Timestamps to 32 bit', 'Zwei NOP-Options zur 32-Bit-Ausrichtung der Timestamps'],
+    tsopt: ['Timestamps option: TSval + TSecr (RFC 7323)', 'Timestamps-Option: TSval + TSecr (RFC 7323)'],
+    greflags: ['C/K/S flags and version 0', 'C/K/S-Flags und Version 0'],
+    greproto: ['EtherType of the payload (0x0800, 0x86DD, 0x6558 Ethernet)', 'EtherType der Payload (0x0800, 0x86DD, 0x6558 Ethernet)'],
+    grecsum: ['Optional checksum over GRE header and payload', 'Optionale Prüfsumme über GRE-Header und Payload'],
+    rsvd: ['Reserved', 'Reserviert'],
+    grekey: ['Optional key, e.g. to separate tunnels', 'Optionaler Key, z. B. zur Trennung von Tunneln'],
+    greseq: ['Optional sequence number', 'Optionale Sequenznummer'],
+    vxflags: ['Flags: I bit = valid VNI', 'Flags: I-Bit = gültige VNI'],
+    vni: ['24-bit virtual network identifier', '24-Bit-Virtual-Network-Identifier'],
+    gnver: ['Version and options length in 4-byte words', 'Version und Options-Länge in 4-Byte-Worten'],
+    gnflags: ['O (control) and C (critical options) flags', 'O- (Control) und C-Flags (kritische Options)'],
+    gnopt: ['Variable-length TLV options', 'TLV-Options variabler Länge'],
+    lispflags: ['N, L, E, V, I flags', 'N-, L-, E-, V-, I-Flags'],
+    nonce: ['Nonce or source/destination map version', 'Nonce oder Source/Destination Map-Version'],
+    iid: ['Instance ID and/or Locator-Status-Bits', 'Instance ID und/oder Locator-Status-Bits'],
+    spi: ['Security Parameters Index – identifies the SA', 'Security Parameters Index – identifiziert die SA'],
+    espseq: ['Sequence number (anti-replay)', 'Sequenznummer (Anti-Replay)'],
+    iv: ['Initialization vector (CBC 16 B, GCM/ChaCha20 8 B)', 'Initialisierungsvektor (CBC 16 B, GCM/ChaCha20 8 B)'],
+    pad: ['Padding to the cipher block size / 4-byte boundary', 'Padding auf Cipher-Blockgröße / 4-Byte-Grenze'],
+    padlen: ['Number of padding bytes', 'Anzahl der Padding-Bytes'],
+    espnh: ['Protocol of the protected payload (4 IPv4, 41 IPv6, 47 GRE)', 'Protokoll der geschützten Payload (4 IPv4, 41 IPv6, 47 GRE)'],
+    icv: ['Integrity Check Value (authentication tag)', 'Integrity Check Value (Authentifizierungs-Tag)'],
+    wgtype: ['Message type 4 = transport data', 'Nachrichtentyp 4 = Transportdaten'],
+    wgrecv: ['Receiver index of the peer session', 'Receiver-Index der Peer-Session'],
+    wgctr: ['64-bit nonce counter', '64-Bit-Nonce-Zähler'],
+    wgpad: ['Zero padding to a multiple of 16 B (never above the MTU)', 'Null-Padding auf ein Vielfaches von 16 B (nie über die MTU)'],
+    wgtag: ['Poly1305 authentication tag', 'Poly1305-Authentifizierungs-Tag'],
+    payload: ['Inner payload / application data', 'Innere Payload / Anwendungsdaten']
+  };
+
+  root.EncapI18n = { T: T, FIELDS: FIELDS };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* Encapsulation Calculator – user interface. All maths lives in calc.js. */
+(function () {
+  'use strict';
+  var C = window.EncapCalc, G = window.EncapConfig, I = window.EncapI18n;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var HUES = { eth: 215, dot1q: 228, qinq: 242, macsec: 4, pppoe: 268, mpls: 286, ipv4: 165, ipv6: 145, srv6: 122,
+               udp: 46, tcp: 30, gre: 335, vxlan: 314, geneve: 298, lisp: 255, esp: 18, wg: 190, payload: 220 };
+  var GROUPS = [['l2', ['eth', 'dot1q', 'qinq', 'macsec']], ['shim', ['pppoe', 'mpls']], ['l3', ['ipv4', 'ipv6', 'srv6']],
+                ['l4', ['udp', 'tcp']], ['tunnel', ['gre', 'vxlan', 'geneve', 'lisp']], ['sec', ['esp', 'wg']]];
+  var MTU_PRESETS = [1500, 1492, 1600, 9000, 9216];
+  var TARGET_PRESETS = [1280, 1400, 1500, 9000];
+  var VENDORS = [['cisco', 'Cisco IOS'], ['linux', 'Linux'], ['mikrotik', 'MikroTik'], ['juniper', 'Juniper']];
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var uidSeq = 0;
+  var state = { mtu: 1500, layers: [], mode: 'forward', target: 1500, probe: null, lang: 'en', vendor: 'cisco', preset: null };
+  var last = null;          // last analysis result
+  var cardEls = new Map();  // uid -> <li>
+  var focusUid = null;
+
+  // ------------------------------------------------------------------ utils
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function lookup(obj, path) { return path.split('.').reduce(function (o, k) { return o && o[k] !== undefined ? o[k] : undefined; }, obj); }
+  function t(key, p) {
+    var s = lookup(I.T[state.lang], key);
+    if (s === undefined) s = lookup(I.T.en, key);
+    if (s === undefined) s = key;
+    if (p) s = String(s).replace(/\{(\w+)\}/g, function (m, k) { return p[k] !== undefined ? p[k] : m; });
+    return s;
+  }
+  function el(tag, attrs, html) {
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'style') e.style.cssText = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function fmt(n) { return n == null ? '—' : String(n); }
+  function storeGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function storeSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+  function announce(msg) { var l = $('live'); l.textContent = ''; setTimeout(function () { l.textContent = msg; }, 30); }
+  var toastTimer;
+  function toast(msg) { var x = $('toast'); x.textContent = msg; x.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { x.classList.remove('show'); }, 2600); }
+  function mkLayer(type, opts) { var n = C.normalizeLayer({ type: type, opts: opts || {} }); return { uid: ++uidSeq, type: n.type, opts: n.opts }; }
+  function plain(layers) { return layers.map(function (l) { return { type: l.type, opts: l.opts }; }); }
+  function layerName(l) { return C.LAYERS[l.type].name; }
+  function refLabel(key) { return key.replace(/^RFC(\d+)$/, 'RFC $1').replace('IEEE-', 'IEEE ').replace('CISCO-MACSEC', 'Cisco MACsec').replace('WG-PAPER', 'WireGuard paper').replace('WG-LINUX', 'Linux WireGuard').replace('WG-QUICK', 'wg-quick'); }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text); });
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text) {
+    var ta = el('textarea', { style: 'position:fixed;left:-9999px;top:0', 'aria-hidden': 'true' });
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta); return ok;
+  }
+
+  // ------------------------------------------------------------------ icons
+  var ICON = {
+    gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>',
+    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+  };
+
+  // ------------------------------------------------------------------ analysis
+  function compute() {
+    var layers = plain(state.layers);
+    var mtu = state.mtu, required = null;
+    if (state.mode === 'reverse') {
+      required = C.requiredUnderlay(layers, state.target);
+      if (required != null) mtu = required;
+    }
+    var res = C.analyze({ mtu: mtu, layers: layers, probe: state.probe });
+    res.required = required;
+    res.reverse = state.mode === 'reverse';
+    return res;
+  }
+
+  // ------------------------------------------------------------------ palette & presets
+  function headerBytesLabel(type) {
+    var def = C.LAYERS[type];
+    var n = C.layerHeaderBytes({ type: type, opts: {} }, type === 'eth');
+    if (type === 'esp') return '≥36';
+    if (type === 'srv6') return '8+16n';
+    if (type === 'mpls') return '4·n';
+    return String(n) + (def.opts.length && type !== 'macsec' ? '+' : '');
+  }
+  function renderPalette() {
+    var p = $('palette'); p.innerHTML = '';
+    GROUPS.forEach(function (g) {
+      var wrap = el('div', { class: 'palette-group', role: 'group', 'aria-label': t('groups.' + g[0]) });
+      wrap.appendChild(el('h3', { text: t('groups.' + g[0]), 'aria-hidden': 'true' }));
+      var items = el('div', { class: 'palette-items' });
+      g[1].forEach(function (type) {
+        var b = el('button', { type: 'button', class: 'chip', style: '--h:' + HUES[type], 'data-type': type,
+          'aria-label': C.LAYERS[type].name + ' – ' + t('layerDesc.' + type) },
+          '<span class="sw" aria-hidden="true"></span>' + esc(C.LAYERS[type].name) + '<span class="sz" aria-hidden="true">' + headerBytesLabel(type) + '</span>');
+        b.title = t('layerDesc.' + type);
+        b.addEventListener('click', function () {
+          if (Date.now() < suppressClickUntil) return;
+          addLayer(type, state.layers.length);
+        });
+        b.addEventListener('pointerdown', function (e) { startPress(e, { kind: 'new', type: type }); });
+        items.appendChild(b);
+      });
+      wrap.appendChild(items);
+      p.appendChild(wrap);
+    });
+  }
+  function renderPresets() {
+    var box = $('presets'); box.innerHTML = '';
+    C.PRESETS.forEach(function (pr) {
+      var dots = pr.layers.map(function (l) { var b = C.layerHeaderBytes(l, false); return '<i style="--h:' + HUES[l.type] + ';width:' + Math.max(4, Math.min(22, b / 1.6)) + 'px"></i>'; }).join('');
+      var b = el('button', { type: 'button', class: 'preset', 'aria-pressed': String(state.preset === pr.id), 'data-preset': pr.id },
+        '<strong>' + esc(pr.name) + '</strong><small>MTU ' + pr.mtu + '</small><span class="desc">' + esc(t('presetDesc.' + pr.id)) + '</span><span class="dots" aria-hidden="true">' + dots + '</span>');
+      b.title = t('presetDesc.' + pr.id);
+      b.addEventListener('click', function () { loadPreset(pr); });
+      box.appendChild(b);
+    });
+  }
+  function renderChips(boxId, list, current, onPick) {
+    var box = $(boxId); box.innerHTML = '';
+    list.forEach(function (v) {
+      var b = el('button', { type: 'button', 'aria-pressed': String(v === current), text: String(v) });
+      b.addEventListener('click', function () { onPick(v); });
+      box.appendChild(b);
+    });
+  }
+
+  // ------------------------------------------------------------------ actions
+  function commit(mutate, msg, opts) {
+    var first = rects();
+    mutate();
+    if (!(opts && opts.keepPreset)) state.preset = null;
+    update();
+    flip(first);
+    if (msg) announce(msg);
+  }
+  function addLayer(type, index) {
+    var L = mkLayer(type);
+    commit(function () { state.layers.splice(index, 0, L); }, t('added', { layer: C.LAYERS[type].name, pos: index + 1, n: state.layers.length + 1 }));
+    return L;
+  }
+  function moveLayer(uid, to) {
+    var from = indexOf(uid); if (from < 0) return;
+    to = Math.max(0, Math.min(state.layers.length - 1, to));
+    if (from === to) return;
+    var L = state.layers[from];
+    focusUid = document.activeElement && document.activeElement.closest && document.activeElement.closest('.card') ? uid : focusUid;
+    commit(function () { state.layers.splice(from, 1); state.layers.splice(to, 0, L); }, t('moved', { layer: layerName(L), pos: to + 1, n: state.layers.length }));
+  }
+  function removeLayer(uid, focusNext) {
+    var i = indexOf(uid); if (i < 0) return;
+    var L = state.layers[i], card = cardEls.get(uid);
+    var nextUid = focusNext ? (state.layers[i + 1] || state.layers[i - 1] || {}).uid : null;
+    var go = function () {
+      commit(function () { state.layers.splice(i, 1); }, t('removed', { layer: layerName(L) }));
+      if (nextUid && cardEls.get(nextUid)) cardEls.get(nextUid).focus();
+    };
+    if (card && !reduceMotion) { card.classList.add('leave'); setTimeout(go, 170); } else go();
+  }
+  function setOpt(uid, k, v) {
+    var L = state.layers[indexOf(uid)]; if (!L) return;
+    var o = Object.assign({}, L.opts); o[k] = v;
+    L.opts = C.normalizeLayer({ type: L.type, opts: o }).opts;
+    state.preset = null;
+    update();
+  }
+  function loadPreset(pr) {
+    commit(function () {
+      state.layers = pr.layers.map(function (l) { return mkLayer(l.type, l.opts); });
+      state.mtu = pr.mtu; state.probe = null; state.mode = 'forward'; state.preset = pr.id;
+    }, t('presetLoaded', { name: pr.name }), { keepPreset: true });
+  }
+  function indexOf(uid) { for (var i = 0; i < state.layers.length; i++) if (state.layers[i].uid === uid) return i; return -1; }
+
+  // ------------------------------------------------------------------ FLIP animation
+  function rects() {
+    var m = new Map();
+    cardEls.forEach(function (c, uid) { m.set(uid, c.getBoundingClientRect()); });
+    return m;
+  }
+  function flip(first) {
+    if (reduceMotion) return;
+    var fresh = 0;
+    state.layers.forEach(function (L) {
+      var c = cardEls.get(L.uid); if (!c) return;
+      var a = first.get(L.uid);
+      if (!a) {
+        c.classList.remove('enter'); void c.offsetWidth;
+        c.style.animationDelay = (fresh++ * 45) + 'ms';
+        c.classList.add('enter');
+        return;
+      }
+      var b = c.getBoundingClientRect(), dy = a.top - b.top;
+      if (Math.abs(dy) < 1) return;
+      c.style.transition = 'none';
+      c.style.transform = 'translateY(' + dy + 'px)';
+      requestAnimationFrame(function () {
+        c.style.transition = 'transform .38s cubic-bezier(.2,.8,.2,1)';
+        c.style.transform = '';
+      });
+    });
+  }
+
+  // ------------------------------------------------------------------ stack cards
+  function optLabel(type, k) {
+    var specific = t('opt.' + k + '_' + type);
+    return specific.indexOf('opt.') === 0 ? t('opt.' + k) : specific;
+  }
+  function optValueLabel(type, k, v) {
+    if (type === 'esp') {
+      if (k === 'c') return C.ESP_CIPHERS[v].label;
+      if (k === 'a') return C.ESP_INTEG[v].label + ' (' + C.ESP_INTEG[v].icv + ' B)';
+      if (k === 'i') return v + ' B';
+      if (k === 'b') return v + ' bit';
+      if (k === 'm') return t('opt.' + v);
+    }
+    return String(v);
+  }
+  function summaryLine(L, idx, res) {
+    var o = L.opts, s = [];
+    switch (L.type) {
+      case 'macsec': s.push(o.sci ? 'SecTAG 16 + ICV 16' : 'SecTAG 8 + ICV 16'); break;
+      case 'mpls': s.push(o.n + ' label' + (o.n > 1 ? 's' : '')); break;
+      case 'ipv4': s.push(o.o ? o.o + ' B options' : t('noOpts')); break;
+      case 'srv6': s.push(o.n + ' SID' + (o.n > 1 ? 's' : '') + (o.r ? ' · reduced' : '')); break;
+      case 'tcp': s.push(o.ts ? 'Timestamps' : t('noOpts')); break;
+      case 'gre': if (o.c) s.push('Checksum'); if (o.k) s.push('Key'); if (o.s) s.push('Seq'); if (!s.length) s.push(t('noOpts')); break;
+      case 'geneve': s.push(o.o + ' B options'); break;
+      case 'esp': {
+        s.push(t('opt.' + o.m)); s.push(C.ESP_CIPHERS[o.c].label.replace('AES-', 'AES-' + (o.c === 'chacha20' ? '' : o.b + '-')).replace('AES--', 'AES-'));
+        if (o.c === 'aes-cbc') s.push(C.ESP_INTEG[o.a].label); else s.push('ICV ' + C.espParams(o).icv);
+        if (o.n) s.push('NAT-T');
+        var d = res.detail[idx]; if (d && d.pad) s.push('pad ' + d.pad);
+        break;
+      }
+      case 'wg': {
+        var outer = null; for (var j = idx - 1; j >= 0; j--) if (state.layers[j].type === 'ipv4' || state.layers[j].type === 'ipv6') { outer = C.LAYERS[state.layers[j].type].name; break; }
+        s.push(t('opt.outerFrom', { v: outer || '—' }));
+        var dw = res.detail[idx]; if (dw && dw.pad) s.push('pad ' + dw.pad);
+        break;
+      }
+      case 'eth': s.push(idx < res.l2len ? 'DA · SA · Type · FCS' : 'inner, no FCS'); break;
+      default: s.push(t('groups.' + C.LAYERS[L.type].group));
+    }
+    return s.join(' · ');
+  }
+  function buildOpts(L, box) {
+    var def = C.LAYERS[L.type];
+    def.opts.forEach(function (op) {
+      var id = 'o' + L.uid + op.k;
+      var row = el('div', { class: 'opt', 'data-k': op.k });
+      var lab = el('label', { for: id, text: optLabel(L.type, op.k) });
+      var ctl;
+      if (op.type === 'bool') {
+        ctl = el('input', { type: 'checkbox', id: id });
+        ctl.checked = !!L.opts[op.k];
+        ctl.addEventListener('change', function () { setOpt(L.uid, op.k, ctl.checked ? 1 : 0); });
+      } else if (op.type === 'int') {
+        ctl = el('input', { type: 'number', id: id, min: op.min, max: op.max, step: op.step, inputmode: 'numeric' });
+        ctl.value = L.opts[op.k];
+        ctl.addEventListener('change', function () { setOpt(L.uid, op.k, ctl.value); ctl.value = state.layers[indexOf(L.uid)].opts[op.k]; });
+      } else {
+        ctl = el('select', { id: id });
+        op.values.forEach(function (v) {
+          var o = el('option', { value: String(v), text: optValueLabel(L.type, op.k, v) });
+          if (String(v) === String(L.opts[op.k])) o.selected = true;
+          ctl.appendChild(o);
+        });
+        ctl.addEventListener('change', function () { setOpt(L.uid, op.k, ctl.value); });
+      }
+      row.appendChild(lab); row.appendChild(ctl); box.appendChild(row);
+    });
+  }
+  function createCard(L) {
+    var c = el('li', { class: 'card', tabindex: '0', 'data-uid': L.uid, style: '--h:' + HUES[L.type] });
+    var hasOpts = C.LAYERS[L.type].opts.length > 0;
+    c.innerHTML =
+      '<button type="button" class="handle" tabindex="-1" aria-hidden="true">⠿</button>' +
+      '<div class="card-main"><div class="card-title"><strong>' + esc(layerName(L)) + '</strong><span class="card-bytes"></span><span class="card-tag"></span></div><div class="card-sub"></div></div>' +
+      '<div class="card-actions">' +
+        (hasOpts ? '<button type="button" class="b-opt" aria-expanded="false" aria-controls="opts' + L.uid + '">' + ICON.gear + '</button>' : '') +
+        '<button type="button" class="b-up">' + ICON.up + '</button><button type="button" class="b-down">' + ICON.down + '</button>' +
+        '<button type="button" class="rm">' + ICON.x + '</button></div>' +
+      '<div class="refs"></div>' +
+      (hasOpts ? '<div class="card-opts" id="opts' + L.uid + '" hidden></div>' : '');
+    if (hasOpts) {
+      buildOpts(L, c.querySelector('.card-opts'));
+      var bo = c.querySelector('.b-opt');
+      bo.addEventListener('click', function () {
+        var box = c.querySelector('.card-opts'); var open = box.hidden;
+        box.hidden = !open; bo.setAttribute('aria-expanded', String(open));
+        if (open) { var f = box.querySelector('input,select'); if (f) f.focus(); }
+      });
+    }
+    c.querySelector('.b-up').addEventListener('click', function () { moveLayer(L.uid, indexOf(L.uid) - 1); });
+    c.querySelector('.b-down').addEventListener('click', function () { moveLayer(L.uid, indexOf(L.uid) + 1); });
+    c.querySelector('.rm').addEventListener('click', function () { removeLayer(L.uid, true); });
+    c.querySelector('.handle').addEventListener('pointerdown', function (e) { startPress(e, { kind: 'move', uid: L.uid }); });
+    c.addEventListener('keydown', function (e) {
+      if (e.target !== c) return;
+      var i = indexOf(L.uid);
+      if ((e.altKey || e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault(); focusUid = L.uid; moveLayer(L.uid, i + (e.key === 'ArrowUp' ? -1 : 1));
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault(); var n = state.layers[i + (e.key === 'ArrowUp' ? -1 : 1)]; if (n) cardEls.get(n.uid).focus();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault(); removeLayer(L.uid, true);
+      } else if ((e.key === 'Enter' || e.key === ' ') && hasOpts) {
+        e.preventDefault(); c.querySelector('.b-opt').click();
+      }
+    });
+    return c;
+  }
+  function cardRefs(L) {
+    if (L.type === 'esp') {
+      var r = ['RFC4303', C.ESP_CIPHERS[L.opts.c].ref];
+      if (L.opts.c === 'aes-cbc') r.push(C.ESP_INTEG[L.opts.a].ref);
+      if (L.opts.n) r.push('RFC3948');
+      return r;
+    }
+    if (L.type === 'wg') return ['WG-PAPER', 'WG-LINUX'];
+    return C.LAYERS[L.type].refs.slice(0, 2);
+  }
+  function updateCard(c, L, i, res) {
+    var refs = cardRefs(L), sig = refs.join(',');
+    var rb = c.querySelector('.refs');
+    if (rb._sig !== sig) {
+      rb._sig = sig;
+      rb.innerHTML = refs.map(function (r) { return '<a href="' + esc(C.REFS[r].u) + '" target="_blank" rel="noopener noreferrer" tabindex="-1" title="' + esc(C.REFS[r].t) + '">' + esc(refLabel(r)) + '</a>'; }).join('');
+    }
+    var n = state.layers.length, d = res.detail[i];
+    var outer = i < res.l2len;
+    var bytes = d ? d.h + d.t : 0;
+    c.querySelector('.card-bytes').textContent = bytes + ' B';
+    c.querySelector('.card-tag').textContent = outer ? t('outerL2') : (res.anchor >= 0 && i > res.anchor ? 'payload' : (i === res.anchor ? t('innerTag') : t('inMtu')));
+    c.querySelector('.card-sub').textContent = summaryLine(L, i, res);
+    c.classList.toggle('frame-only', outer);
+    var hasErr = res.warnings.some(function (w) { return w.level === 'error' && w.p.i === i; });
+    c.classList.toggle('has-error', hasErr);
+    c.setAttribute('aria-label', layerName(L) + ', ' + bytes + ' B, ' + t('position', { pos: i + 1, n: n }) + (outer ? ', ' + t('outerL2') : ''));
+    c.querySelector('.b-up').setAttribute('aria-label', t('moveUp') + ': ' + layerName(L)); c.querySelector('.b-up').title = t('moveUp');
+    c.querySelector('.b-down').setAttribute('aria-label', t('moveDown') + ': ' + layerName(L)); c.querySelector('.b-down').title = t('moveDown');
+    c.querySelector('.rm').setAttribute('aria-label', t('remove') + ': ' + layerName(L)); c.querySelector('.rm').title = t('remove');
+    c.querySelector('.b-up').disabled = i === 0; c.querySelector('.b-down').disabled = i === n - 1;
+    var bo = c.querySelector('.b-opt'); if (bo) { bo.setAttribute('aria-label', t('options') + ': ' + layerName(L)); bo.title = t('options'); }
+    if (L.type === 'esp') {
+      var box = c.querySelector('.card-opts');
+      box.querySelector('[data-k="i"]').hidden = L.opts.c !== 'aes-gcm';
+      box.querySelector('[data-k="a"]').hidden = L.opts.c !== 'aes-cbc';
+      box.querySelector('[data-k="b"]').hidden = L.opts.c === 'chacha20';
+    }
+    var box2 = c.querySelector('.card-opts');
+    if (box2) box2.querySelectorAll('.opt').forEach(function (row) {
+      var k = row.getAttribute('data-k'); row.querySelector('label').textContent = optLabel(L.type, k);
+      var ctl = row.querySelector('input,select');
+      if (ctl.tagName === 'SELECT') Array.prototype.forEach.call(ctl.options, function (o) { var v = o.value; var op = C.LAYERS[L.type].opts.filter(function (x) { return x.k === k; })[0]; var real = op.values.filter(function (x) { return String(x) === v; })[0]; o.textContent = optValueLabel(L.type, k, real); });
+    });
+  }
+  function renderStack(res) {
+    var list = $('stack');
+    var keep = new Set(state.layers.map(function (l) { return l.uid; }));
+    cardEls.forEach(function (c, uid) { if (!keep.has(uid)) { c.remove(); cardEls.delete(uid); } });
+    state.layers.forEach(function (L, i) {
+      var c = cardEls.get(L.uid);
+      if (!c) { c = createCard(L); cardEls.set(L.uid, c); }
+      if (list.children[i] !== c) list.insertBefore(c, list.children[i] || null);
+      updateCard(c, L, i, res);
+    });
+    $('stack-empty').hidden = state.layers.length > 0;
+    if (focusUid && cardEls.get(focusUid)) { cardEls.get(focusUid).focus({ preventScroll: false }); focusUid = null; }
+  }
+
+  // ------------------------------------------------------------------ results
+  var kpiEls = {};
+  function kpi(id, primary) {
+    if (kpiEls[id]) return kpiEls[id];
+    var k = el('div', { class: 'kpi' + (primary ? ' primary' : ''), id: 'kpi-' + id }, '<div class="k"></div><div class="v"><span class="num">0</span><small></small></div><div class="s"></div>');
+    k._v = 0; kpiEls[id] = k; return k;
+  }
+  function tween(k, to, suffix) {
+    var numEl = k.querySelector('.num');
+    k.querySelector('.v small').textContent = suffix || '';
+    if (to == null || typeof to !== 'number' || !isFinite(to)) { numEl.textContent = to == null ? '—' : String(to); k._v = 0; return; }
+    var from = k._v || 0; k._v = to;
+    if (reduceMotion || from === to || Math.abs(to - from) > 20000) { numEl.textContent = String(to); return; }
+    k.classList.remove('pulse'); void k.offsetWidth; k.classList.add('pulse');
+    var t0 = performance.now(), dur = 420;
+    var step = function (now) {
+      var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      numEl.textContent = String(Math.round(from + (to - from) * e));
+      if (p < 1 && k._v === to) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function renderKpis(res) {
+    var box = $('kpis');
+    var order = res.reverse ? ['req', 'inner', 'over', 'mss4', 'mss6', 'frame'] : ['inner', 'over', 'mss4', 'mss6', 'frame'];
+    var want = order.map(function (id) { return kpi(id, id === (res.reverse ? 'req' : 'inner')); });
+    want.forEach(function (k, i) { k.classList.toggle('primary', i === 0); if (box.children[i] !== k) box.insertBefore(k, box.children[i] || null); });
+    while (box.children.length > want.length) box.removeChild(box.lastChild);
+    var bad = res.innerMTU <= 0 || (res.reverse && res.required == null);
+    function set(id, label, val, suf, sub, isBad) {
+      var k = kpiEls[id]; k.querySelector('.k').textContent = label; tween(k, val, suf); k.querySelector('.s').textContent = sub; k.classList.toggle('bad', !!isBad);
+    }
+    if (res.reverse) set('req', t('required'), res.required == null ? t('impossible') : res.required, res.required == null ? '' : 'B', t('requiredSub', { t: state.target }), res.required == null);
+    set('inner', t('innerMtu'), bad ? null : res.innerMTU, 'B', t('innerMtuSub') + (res.innerFamily ? ' (' + C.LAYERS[res.innerFamily].name + ')' : ''), res.innerMTU <= 0);
+    set('over', t('overhead'), bad ? null : res.overhead, 'B', bad ? '' : res.overheadPct.toFixed(1) + ' % · +' + res.l2Overhead + ' B L2', false);
+    set('mss4', t('mssV4'), bad || res.mssV4 <= 0 ? null : res.mssV4, 'B', t('mssSub', { n: res.innerMTU - res.mssV4 }), false);
+    set('mss6', t('mssV6'), bad || res.mssV6 <= 0 ? null : res.mssV6, 'B', res.innerMTU < 1280 ? '< 1280 · IPv6 ✗' : t('mssSub', { n: 60 }), res.innerMTU < 1280 && res.innerMTU > 0);
+    set('frame', t('frame'), res.frameSize, res.frameSize == null ? '' : 'B', res.frameSize == null ? t('noFrame') : t('frameSub', { w: res.wireSize }), false);
+    kpiEls.mss4.classList.toggle('primary', !res.reverse && res.innerFamily === 'ipv4' && false);
+    var tn = $('ts-note');
+    if (res.tsPayload != null && !bad) { tn.hidden = false; tn.textContent = t('tsNote', { n: res.tsPayload }); } else tn.hidden = true;
+    // mobile summary bar
+    var errs = res.warnings.filter(function (w) { return w.level === 'error'; }).length;
+    $('summary-bar').innerHTML = '<span>' + esc(t('innerMtu')) + ' <b>' + fmt(bad ? null : res.innerMTU) + '</b></span><span>MSS ' + fmt(bad ? null : res.mssV4) + ' / ' + fmt(bad || res.innerMTU < 1280 ? null : res.mssV6) + '</span>' + (errs ? '<span class="w">' + errs + ' ✗</span>' : '');
+  }
+
+  function renderWarnings(res) {
+    var ul = $('warnings'); ul.innerHTML = '';
+    var list = res.warnings.slice().sort(function (a, b) { var o = { error: 0, warn: 1, info: 2 }; return o[a.level] - o[b.level]; });
+    if (!list.some(function (w) { return w.level === 'error' || w.level === 'warn'; })) {
+      ul.appendChild(el('li', { class: 'ok' }, '<span class="ic" aria-hidden="true">✓</span><span>' + esc(t('allGood')) + '</span>'));
+    }
+    list.forEach(function (w) {
+      var p = Object.assign({}, w.p); if (p.i != null) p.pos = p.i + 1;
+      var icon = { error: '!', warn: '▲', info: 'i' }[w.level];
+      var sr = { error: 'Error', warn: 'Warning', info: 'Info' }[w.level];
+      ul.appendChild(el('li', { class: w.level, 'data-code': w.code }, '<span class="ic" aria-hidden="true">' + icon + '</span><span><span class="sr-only">' + sr + ': </span>' + esc(t('warn.' + w.code, p)) + '</span>'));
+    });
+  }
+
+  // ------------------------------------------------------------------ byte layout
+  var tipData = new WeakMap();
+  var segEls = new Map(), fldEls = new Map();
+  function layerUidAt(i) { return i >= 0 && state.layers[i] ? state.layers[i].uid : 'p'; }
+
+  function renderFrameBar(res) {
+    var bar = $('framebar'), total = res.layout.total || 1;
+    var segs = [];
+    res.layout.fields.forEach(function (f) {
+      var key = f.payload ? 'payload' : layerUidAt(f.layer) + (f.trailer ? 't' : 'h');
+      var lastS = segs[segs.length - 1];
+      if (lastS && lastS.key === key) { lastS.bytes += f.bytes; lastS.enc = lastS.enc && f.enc; }
+      else segs.push({ key: key, bytes: f.bytes, type: f.type, layer: f.layer, enc: f.enc, payload: !!f.payload, trailer: !!f.trailer });
+    });
+    var seen = new Set();
+    var width = bar.clientWidth || 600;
+    segs.forEach(function (s, i) {
+      seen.add(s.key);
+      var e = segEls.get(s.key);
+      if (!e) { e = el('div', { class: 'seg-b' }, '<span></span>'); e.style.width = '0%'; segEls.set(s.key, e); }
+      if (bar.children[i] !== e) bar.insertBefore(e, bar.children[i] || null);
+      e.className = 'seg-b' + (s.payload ? ' payload' : '') + (s.enc ? ' enc' : '');
+      e.style.setProperty('--h', HUES[s.type] || 220);
+      var pct = s.bytes / total * 100;
+      requestAnimationFrame(function () { e.style.width = pct + '%'; });
+      var name = s.payload ? 'Payload' : C.LAYERS[s.type].name + (s.trailer ? ' trailer' : '');
+      e.querySelector('span').textContent = (pct / 100 * width > 70) ? name + ' ' + s.bytes + ' B' : (pct / 100 * width > 26 ? String(s.bytes) : '');
+      tipData.set(e, { title: name, meta: s.bytes + ' B · ' + pct.toFixed(1) + ' %', desc: s.payload ? I.FIELDS.payload[state.lang === 'de' ? 1 : 0] : t('layerDesc.' + s.type) });
+    });
+    segEls.forEach(function (e, k) { if (!seen.has(k)) { e.remove(); segEls.delete(k); } });
+    bar.setAttribute('aria-label', 'Frame ' + res.layout.total + ' B: ' + segs.map(function (s) { return (s.payload ? 'payload' : C.LAYERS[s.type].name) + ' ' + s.bytes; }).join(', '));
+    // ruler
+    var ruler = $('ruler'); ruler.innerHTML = '';
+    var stepB = [100, 250, 500, 1000, 2000, 2500, 5000, 10000].filter(function (s) { return total / s <= 6; })[0] || 20000;
+    for (var b = 0; b < total - stepB * 0.35; b += stepB) ruler.appendChild(el('span', { style: 'left:' + (b / total * 100) + '%', text: String(b) }));
+    ruler.appendChild(el('span', { style: 'left:100%', text: total + ' B' }));
+  }
+
+  function renderByteMap(res) {
+    var map = $('bytemap');
+    var w = map.clientWidth || 600;
+    var u = w >= 640 ? 8 : (w >= 420 ? 6 : 5);
+    $('h-bytemap').textContent = t('layoutHeaders', { u: u });
+    var seen = new Set(), counters = {};
+    var lang = state.lang === 'de' ? 1 : 0;
+    var fields = res.layout.fields;
+    var idx = 0;
+    fields.forEach(function (f, i) {
+      var base = f.payload ? 'payload' : layerUidAt(f.layer) + (f.trailer ? 't' : 'h');
+      counters[base] = (counters[base] || 0) + 1;
+      var key = base + ':' + counters[base];
+      seen.add(key);
+      var e = fldEls.get(key);
+      if (!e) { e = el('div', { class: 'fld', role: 'listitem' }, '<span></span>'); e.style.width = '0px'; fldEls.set(key, e); }
+      if (map.children[idx] !== e) map.insertBefore(e, map.children[idx] || null);
+      idx++;
+      var prev = fields[i - 1], next = fields[i + 1];
+      var first = !prev || prev.layer !== f.layer || !!prev.trailer !== !!f.trailer || prev.payload;
+      var lastF = !next || next.layer !== f.layer || !!next.trailer !== !!f.trailer || next.payload;
+      e.className = 'fld' + (f.payload ? ' payload' : '') + (f.enc ? ' enc' : '') + (f.frameOnly ? ' frame-only' : '') + (first ? ' first' : '') + (lastF ? ' last' : '');
+      e.id = 'fld-' + i;
+      e.style.setProperty('--h', HUES[f.type] || 220);
+      var lname = f.payload ? 'Payload' : C.LAYERS[f.type].name;
+      var span = e.querySelector('span');
+      if (f.payload) { e.style.width = ''; span.textContent = t('payloadNotToScale', { n: f.bytes }); }
+      else {
+        var px = f.bytes * u;
+        requestAnimationFrame(function () { e.style.width = px + 'px'; });
+        var short = f.name.replace(/ Address$/, '').replace(/^Destination/, 'Dst').replace(/^Source/, 'Src');
+        span.textContent = px >= short.length * 6.3 + 6 ? short : (px >= 16 ? String(f.bytes) : '');
+      }
+      var desc = (I.FIELDS[f.key] || ['', ''])[lang];
+      var refs = f.payload ? '' : C.LAYERS[f.type].refs.map(refLabel).join(', ');
+      tipData.set(e, { title: lname + ' · ' + f.name, meta: f.bytes + ' B · offset ' + f.offset + (f.enc ? ' · ' + t('encrypted') : '') + (f.frameOnly ? ' · ' + t('outerL2') : ''), desc: desc, ref: refs });
+      e.setAttribute('aria-label', t('fieldAria', { layer: lname, field: f.name, bytes: f.bytes, off: f.offset }) + (f.enc ? ', ' + t('encrypted') : ''));
+    });
+    fldEls.forEach(function (e, k) { if (!seen.has(k)) { e.remove(); fldEls.delete(k); } });
+    if (activeField >= fields.length) activeField = fields.length - 1;
+    // table
+    var rows = fields.map(function (f) {
+      return '<tr><td class="n">' + f.offset + '</td><td class="n">' + f.bytes + '</td><td><span class="sw" style="--h:' + (HUES[f.type] || 220) + '"></span>' + esc(f.payload ? 'Payload' : C.LAYERS[f.type].name) + '</td><td>' + esc(f.name) + (f.enc ? ' 🔒' : '') + '</td></tr>';
+    }).join('');
+    $('fieldtable').innerHTML = '<thead><tr><th scope="col">' + esc(t('tOffset')) + '</th><th scope="col">' + esc(t('tBytes')) + '</th><th scope="col">' + esc(t('tLayer')) + '</th><th scope="col">' + esc(t('tField')) + '</th></tr></thead><tbody>' + rows + '</tbody>';
+  }
+
+  function renderProbe(res) {
+    var r = $('probe'), max = Math.max(0, res.innerMTU);
+    r.max = String(max); r.disabled = max <= 0;
+    r.value = String(state.probe == null ? max : Math.min(state.probe, max));
+    $('probe-out').textContent = (state.probe == null ? max : Math.min(state.probe, max)) + ' B' + (state.probe == null ? ' (' + t('probeMax') + ')' : '');
+  }
+
+  // tooltips
+  var tipEl, activeField = -1;
+  function showTip(target, x, y) {
+    var d = tipData.get(target); if (!d) return hideTip();
+    tipEl.innerHTML = '<b>' + esc(d.title) + '</b><div class="tt-meta">' + esc(d.meta) + '</div>' + (d.desc ? '<div>' + esc(d.desc) + '</div>' : '') + (d.ref ? '<div class="tt-ref">' + esc(d.ref) + '</div>' : '');
+    tipEl.hidden = false;
+    var r = tipEl.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+    var left = Math.min(vw - r.width - 8, Math.max(8, x - r.width / 2)), top = y - r.height - 14;
+    if (top < 8) top = y + 22;
+    if (top + r.height > vh - 8) top = vh - r.height - 8;
+    tipEl.style.left = left + 'px'; tipEl.style.top = top + 'px';
+  }
+  function hideTip() { if (tipEl) tipEl.hidden = true; }
+  function initTooltips() {
+    tipEl = $('tooltip');
+    ['framebar', 'bytemap'].forEach(function (id) {
+      var host = $(id);
+      host.addEventListener('pointermove', function (e) {
+        var tEl = e.target.closest('.fld, .seg-b'); if (!tEl || (drag && drag.active)) return hideTip();
+        showTip(tEl, e.clientX, e.clientY);
+      });
+      host.addEventListener('pointerleave', hideTip);
+    });
+    var bm = $('bytemap');
+    bm.addEventListener('keydown', function (e) {
+      var n = bm.children.length; if (!n) return;
+      var k = e.key, i = activeField;
+      if (k === 'ArrowRight' || k === 'ArrowDown') i = Math.min(n - 1, i + 1);
+      else if (k === 'ArrowLeft' || k === 'ArrowUp') i = Math.max(0, i - 1);
+      else if (k === 'Home') i = 0; else if (k === 'End') i = n - 1;
+      else if (k === 'Escape') { hideTip(); return; } else return;
+      e.preventDefault(); setActiveField(i);
+    });
+    bm.addEventListener('focus', function () { setActiveField(activeField < 0 ? 0 : activeField); });
+    bm.addEventListener('blur', function () { hideTip(); var a = bm.querySelector('.fld.active'); if (a) a.classList.remove('active'); });
+    window.addEventListener('scroll', hideTip, { passive: true });
+  }
+  function setActiveField(i) {
+    var bm = $('bytemap'), prev = bm.querySelector('.fld.active');
+    if (prev) prev.classList.remove('active');
+    var f = bm.children[i]; if (!f) return;
+    activeField = i; f.classList.add('active');
+    bm.setAttribute('aria-activedescendant', f.id);
+    var r = f.getBoundingClientRect(); showTip(f, r.left + r.width / 2, r.top);
+  }
+
+  // ------------------------------------------------------------------ config & sources
+  function highlight(code) {
+    return code.split('\n').map(function (line) {
+      var m = line.match(/^(\s*)([!#].*)$/);
+      if (m) return m[1] + '<span class="cm">' + esc(m[2]) + '</span>';
+      var cmt = '', i = line.search(/\s{2,}[!#] /);
+      if (i > 0) { cmt = '<span class="cm">' + esc(line.slice(i)) + '</span>'; line = line.slice(0, i); }
+      return esc(line).replace(/(^|[\s=])(\d{3,5})(?=$|[\s-])/g, '$1<span class="num">$2</span>') + cmt;
+    }).join('\n');
+  }
+  var cfgText = '';
+  function renderConfig(res) {
+    var tabs = $('cfg-tabs');
+    if (!tabs.children.length) {
+      VENDORS.forEach(function (v, i) {
+        var b = el('button', { type: 'button', role: 'tab', id: 'tab-' + v[0], 'aria-controls': 'cfg-panel', text: v[1] });
+        b.addEventListener('click', function () { state.vendor = v[0]; renderConfig(last); });
+        b.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          var j = (i + (e.key === 'ArrowRight' ? 1 : VENDORS.length - 1)) % VENDORS.length;
+          state.vendor = VENDORS[j][0]; renderConfig(last); $('tab-' + state.vendor).focus();
+        });
+        tabs.appendChild(b);
+      });
+    }
+    VENDORS.forEach(function (v) { var b = $('tab-' + v[0]); var sel = v[0] === state.vendor; b.setAttribute('aria-selected', String(sel)); b.tabIndex = sel ? 0 : -1; });
+    $('cfg-panel').setAttribute('aria-labelledby', 'tab-' + state.vendor);
+    var all = G.generate(res, { reverse: res.reverse && res.required != null });
+    cfgText = all[state.vendor];
+    $('cfg-code').innerHTML = highlight(cfgText);
+    $('cfg-refs').innerHTML = G.CONFIG_REFS[state.vendor].map(function (r) { return '<li><a href="' + esc(r.u) + '" target="_blank" rel="noopener noreferrer">' + esc(r.t) + '</a></li>'; }).join('');
+  }
+  function renderSources() {
+    var keys = [];
+    state.layers.forEach(function (l) { C.LAYERS[l.type].refs.forEach(function (r) { if (keys.indexOf(r) < 0) keys.push(r); }); });
+    ['RFC879', 'IEEE-802.3'].forEach(function (r) { if (keys.indexOf(r) < 0) keys.push(r); });
+    $('sources').innerHTML = keys.map(function (k) { var r = C.REFS[k]; return '<li><b>' + esc(refLabel(k)) + '</b> – <a href="' + esc(r.u) + '" target="_blank" rel="noopener noreferrer">' + esc(r.t) + '</a></li>'; }).join('');
+  }
+
+  // ------------------------------------------------------------------ URL state
+  function encode() {
+    return C.encodeState({ mtu: state.mtu, layers: plain(state.layers), mode: state.mode, target: state.target, probe: state.probe, lang: state.lang });
+  }
+  var lastHash = '';
+  function writeHash() {
+    var h = encode();
+    if (h !== lastHash) { lastHash = h; try { history.replaceState(null, '', h); } catch (e) { /* file:// in some browsers */ try { location.hash = h; } catch (e2) { /* ignore */ } } }
+  }
+  function readHash(hash) {
+    var s = C.decodeState(hash);
+    if (!s) return false;
+    state.mtu = s.mtu; state.mode = s.mode; state.target = s.target; state.probe = s.probe;
+    if (s.lang) state.lang = s.lang;
+    state.layers = s.layers.map(function (l) { return mkLayer(l.type, l.opts); });
+    state.preset = null;
+    return true;
+  }
+
+  // ------------------------------------------------------------------ main update
+  function update() {
+    var res = compute();
+    last = res;
+    // inputs
+    $('mode-f').setAttribute('aria-pressed', String(state.mode === 'forward'));
+    $('mode-r').setAttribute('aria-pressed', String(state.mode === 'reverse'));
+    $('row-underlay').hidden = state.mode === 'reverse';
+    $('row-target').hidden = state.mode !== 'reverse';
+    if (document.activeElement !== $('mtu')) $('mtu').value = state.mtu;
+    if (document.activeElement !== $('target')) $('target').value = state.target;
+    renderChips('mtu-presets', MTU_PRESETS, state.mtu, function (v) { state.mtu = v; state.probe = null; update(); });
+    renderChips('target-presets', TARGET_PRESETS, state.target, function (v) { state.target = v; state.probe = null; update(); });
+    document.querySelectorAll('.preset').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-preset') === state.preset)); });
+    renderStack(res);
+    renderKpis(res);
+    renderWarnings(res);
+    renderFrameBar(res);
+    renderByteMap(res);
+    renderProbe(res);
+    renderConfig(res);
+    renderSources();
+    writeHash();
+  }
+
+  function applyI18n() {
+    document.documentElement.lang = state.lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (e) { e.textContent = t(e.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (e) { e.setAttribute('aria-label', t(e.getAttribute('data-i18n-aria'))); });
+    $('lang-en').setAttribute('aria-pressed', String(state.lang === 'en'));
+    $('lang-de').setAttribute('aria-pressed', String(state.lang === 'de'));
+    $('btn-theme').title = t('theme');
+    document.querySelector('.wire-label span').textContent = state.lang === 'de' ? 'außen · zuerst auf dem Kabel' : 'outer · first on the wire';
+    document.querySelector('.wire-label.end span').textContent = state.lang === 'de' ? 'innen · Payload' : 'inner · payload';
+    renderPalette();
+    renderPresets();
+  }
+  function setLang(l) { state.lang = l; storeSet('encap-lang', l); applyI18n(); update(); }
+
+  // ------------------------------------------------------------------ theme
+  function effectiveTheme() {
+    var a = document.documentElement.getAttribute('data-theme');
+    if (a === 'dark' || a === 'light') return a;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  function setTheme(th) { document.documentElement.setAttribute('data-theme', th); storeSet('encap-theme', th); }
+
+  // ------------------------------------------------------------------ drag & drop (pointer events: mouse, pen, touch)
+  var drag = null, suppressClickUntil = 0, ghost = null, indicator = null;
+  function startPress(e, info) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (drag) cleanupDrag();
+    drag = { info: info, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, active: false,
+             touch: e.pointerType === 'touch', src: e.currentTarget, timer: null, longReady: false, drop: null };
+    if (info.kind === 'move') e.preventDefault();
+    if (drag.touch && info.kind === 'new') {
+      drag.timer = setTimeout(function () {
+        if (drag && !drag.active) { drag.longReady = true; drag.src.classList.add('armed'); try { if (navigator.vibrate) navigator.vibrate(8); } catch (err) { /* no-op */ } }
+      }, 230);
+    }
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+  }
+  function onPointerMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag.x = e.clientX; drag.y = e.clientY;
+    var dist = Math.hypot(drag.x - drag.x0, drag.y - drag.y0);
+    if (!drag.active) {
+      if (drag.touch && drag.info.kind === 'new' && !drag.longReady) { if (dist > 10) cleanupDrag(); return; }
+      if (dist < 5) return;
+      activateDrag();
+    }
+    e.preventDefault();
+    moveGhost();
+    computeDrop();
+  }
+  function onPointerUp(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (drag.active) { finishDrop(); suppressClickUntil = Date.now() + 350; }
+    else if (drag.longReady) { suppressClickUntil = Date.now() + 350; addLayer(drag.info.type, state.layers.length); }
+    cleanupDrag();
+  }
+  function onPointerCancel(e) { if (drag && e.pointerId === drag.id) cleanupDrag(); }
+  function activateDrag() {
+    drag.active = true;
+    document.body.classList.add('dragging');
+    var type = drag.info.kind === 'new' ? drag.info.type : state.layers[indexOf(drag.info.uid)].type;
+    ghost = el('div', { class: 'drag-ghost', style: '--h:' + HUES[type], 'aria-hidden': 'true' }, esc(C.LAYERS[type].name) + '<small></small>');
+    document.body.appendChild(ghost);
+    if (drag.info.kind === 'move') { var c = cardEls.get(drag.info.uid); if (c) c.classList.add('is-dragging'); }
+    $('stack-panel').classList.add('drop-active');
+    indicator = el('div', { class: 'drop-indicator', hidden: '' });
+    $('stack-panel').appendChild(indicator);
+    hideTip();
+  }
+  function moveGhost() {
+    if (!ghost) return;
+    ghost.style.transform = 'translate3d(' + (drag.x + 12) + 'px,' + (drag.y - 20) + 'px,0) rotate(-2deg) scale(1.04)';
+  }
+  function computeDrop() {
+    var panel = $('stack-panel'), pr = panel.getBoundingClientRect();
+    var pad = 28;
+    var over = drag.x >= pr.left - pad && drag.x <= pr.right + pad && drag.y >= pr.top - pad && drag.y <= pr.bottom + pad;
+    var others = state.layers.filter(function (l) { return !(drag.info.kind === 'move' && l.uid === drag.info.uid); });
+    var idx = others.length;
+    for (var i = 0; i < others.length; i++) {
+      var r = cardEls.get(others[i].uid).getBoundingClientRect();
+      if (drag.y < r.top + r.height / 2) { idx = i; break; }
+    }
+    drag.drop = over ? idx : null;
+    ghost.classList.toggle('removing', !over && drag.info.kind === 'move');
+    ghost.querySelector('small').textContent = !over && drag.info.kind === 'move' ? t('dropRemove') : (over ? '→ ' + (idx + 1) : '');
+    if (!over || !others.length) { indicator.hidden = true; return; }
+    indicator.hidden = false;
+    var top;
+    if (idx < others.length) top = cardEls.get(others[idx].uid).getBoundingClientRect().top - pr.top - 5;
+    else { var lr = cardEls.get(others[others.length - 1].uid).getBoundingClientRect(); top = lr.bottom - pr.top + 2; }
+    indicator.style.top = top + 'px';
+    indicator.style.left = '16px'; indicator.style.right = '16px';
+    // autoscroll near the viewport edges
+    if (drag.y < 60) window.scrollBy(0, -12); else if (drag.y > window.innerHeight - 60) window.scrollBy(0, 12);
+  }
+  function finishDrop() {
+    var d = drag.drop;
+    if (drag.info.kind === 'new') { if (d != null) addLayer(drag.info.type, d); return; }
+    var uid = drag.info.uid;
+    if (d == null) { removeLayer(uid, false); return; }
+    var from = indexOf(uid); if (from < 0) return;
+    var L = state.layers[from];
+    if (d === from) { update(); return; }
+    commit(function () { state.layers.splice(from, 1); state.layers.splice(d, 0, L); }, t('moved', { layer: layerName(L), pos: d + 1, n: state.layers.length }));
+  }
+  function cleanupDrag() {
+    if (!drag) return;
+    clearTimeout(drag.timer);
+    if (drag.src) drag.src.classList.remove('armed');
+    if (drag.info.kind === 'move') { var c = cardEls.get(drag.info.uid); if (c) c.classList.remove('is-dragging'); }
+    document.body.classList.remove('dragging');
+    $('stack-panel').classList.remove('drop-active');
+    if (ghost) { ghost.remove(); ghost = null; }
+    if (indicator) { indicator.remove(); indicator = null; }
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerCancel);
+    drag = null;
+  }
+  // stop page scrolling while a touch drag is armed or active
+  document.addEventListener('touchmove', function (e) { if (drag && (drag.active || drag.longReady || drag.info.kind === 'move')) e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', function (e) { if (drag && drag.touch) e.preventDefault(); });
+
+  // ------------------------------------------------------------------ init
+  function init() {
+    $('ver').textContent = C.VERSION;
+    var th = storeGet('encap-theme'); if (th === 'dark' || th === 'light') document.documentElement.setAttribute('data-theme', th);
+    var lg = storeGet('encap-lang'); if (lg === 'de' || lg === 'en') state.lang = lg;
+    if (!readHash(location.hash)) {
+      state.layers = [mkLayer('eth'), mkLayer('ipv4'), mkLayer('udp'), mkLayer('vxlan'), mkLayer('eth'), mkLayer('ipv4'), mkLayer('tcp')];
+    }
+    applyI18n();
+    initTooltips();
+
+    $('lang-en').addEventListener('click', function () { setLang('en'); });
+    $('lang-de').addEventListener('click', function () { setLang('de'); });
+    $('btn-theme').addEventListener('click', function () { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); });
+    $('btn-share').addEventListener('click', function () {
+      writeHash();
+      copyText(location.href).then(function () { toast(t('shareCopied')); });
+    });
+    $('btn-clear').addEventListener('click', function () { commit(function () { state.layers = []; }, t('removed', { layer: '⨯ ' + t('clear') })); });
+    $('mode-f').addEventListener('click', function () { state.mode = 'forward'; state.probe = null; update(); });
+    $('mode-r').addEventListener('click', function () {
+      if (state.mode !== 'reverse' && last && last.innerMTU > 0) state.target = Math.max(68, state.target || 1500);
+      state.mode = 'reverse'; state.probe = null; update();
+    });
+    $('mtu').addEventListener('input', function () { var v = parseInt(this.value, 10); if (isFinite(v) && v > 0) { state.mtu = v; state.probe = null; state.preset = null; update(); } });
+    $('mtu').addEventListener('change', function () { this.value = state.mtu; });
+    $('target').addEventListener('input', function () { var v = parseInt(this.value, 10); if (isFinite(v) && v > 0) { state.target = v; state.probe = null; update(); } });
+    $('target').addEventListener('change', function () { this.value = state.target; });
+    $('probe').addEventListener('input', function () { var v = parseInt(this.value, 10); state.probe = v >= last.innerMTU ? null : v; update(); });
+    $('probe-max').addEventListener('click', function () { state.probe = null; update(); });
+    $('cfg-copy').addEventListener('click', function () {
+      var b = this; copyText(cfgText).then(function () { b.textContent = t('copied'); setTimeout(function () { b.textContent = t('copy'); }, 1400); });
+    });
+    window.addEventListener('hashchange', function () {
+      if (location.hash === lastHash) return;
+      var first = rects();
+      if (readHash(location.hash)) { lastHash = encode(); applyI18n(); update(); flip(first); }
+    });
+    var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { if (last) { renderFrameBar(last); renderByteMap(last); } }, 120); });
+    update();
+    flip(new Map());
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+</script>
+</body>
+</html>

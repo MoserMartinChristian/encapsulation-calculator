@@ -1,0 +1,13 @@
+{
+  "name": "encapsulation-calculator",
+  "version": "1.0.0",
+  "description": "Byte-exact MTU, MSS and frame-size calculator for network encapsulation stacks. Single offline HTML file.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test test/calc.test.js",
+    "test:e2e": "node build.js && node test/e2e.js",
+    "test:all": "npm test && npm run test:e2e"
+  }
+}

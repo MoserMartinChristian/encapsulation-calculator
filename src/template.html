@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Encapsulation Calculator – byte-exact MTU, MSS and frame size for GRE, VXLAN, Geneve, IPsec ESP, WireGuard, MPLS, SRv6 and PPPoE stacks. Runs offline.">
+<meta name="color-scheme" content="dark light">
+<title>Encapsulation Calculator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='5' rx='1.5' fill='%234c8dff'/%3E%3Crect x='6' y='13' width='20' height='5' rx='1.5' fill='%23ff6b9a'/%3E%3Crect x='9' y='21' width='14' height='5' rx='1.5' fill='%2322c3a6'/%3E%3C/svg%3E">
+<style>
+/*INLINE:styles.css*/
+</style>
+</head>
+<body>
+<a class="skip" href="#results" data-i18n="skip">Skip to results</a>
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="26" height="5" rx="1.5"/><rect x="6" y="13" width="20" height="5" rx="1.5"/><rect x="9" y="21" width="14" height="5" rx="1.5"/></svg>
+    <div>
+      <h1 data-i18n="title">Encapsulation Calculator</h1>
+      <p class="tagline" data-i18n="tagline">Byte-exact MTU &amp; MSS for tunnels, VPNs and overlays</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button type="button" class="btn ghost" id="btn-share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/></svg><span data-i18n="share">Share</span></button>
+    <div class="seg" role="group" aria-label="Language / Sprache">
+      <button type="button" id="lang-en" aria-pressed="true" lang="en">EN</button>
+      <button type="button" id="lang-de" aria-pressed="false" lang="de">DE</button>
+    </div>
+    <button type="button" class="btn icon ghost" id="btn-theme" data-i18n-aria="theme" aria-label="Toggle dark / light mode">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="col col-build" aria-labelledby="h-palette">
+    <div class="panel panel-examples">
+      <h2 id="h-examples" data-i18n="examples">Examples</h2>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div class="panel panel-palette">
+      <h2 id="h-palette" data-i18n="palette">Layers</h2>
+      <p class="hint" id="palette-hint" data-i18n="paletteHint">Drag into the stack, or press Enter / tap to append.</p>
+      <div class="palette" id="palette" aria-labelledby="h-palette" aria-describedby="palette-hint"></div>
+    </div>
+  </section>
+
+  <section class="col col-stack" aria-labelledby="h-stack">
+    <div class="panel stack-panel" id="stack-panel">
+      <div class="panel-head">
+        <h2 id="h-stack" data-i18n="stack">Packet stack</h2>
+        <button type="button" class="btn small ghost" id="btn-clear" data-i18n="clear">Clear</button>
+      </div>
+      <p class="hint" id="stack-hint" data-i18n="stackHint">Outermost header first.</p>
+      <div class="wire-label" aria-hidden="true"><span>outer · first on the wire</span></div>
+      <ol class="stack" id="stack" aria-labelledby="h-stack" aria-describedby="stack-hint"></ol>
+      <div class="stack-empty" id="stack-empty" data-i18n="stackEmpty">Drop layers here – or tap a layer on the left.</div>
+      <div class="wire-label end" aria-hidden="true"><span>inner · payload</span></div>
+    </div>
+  </section>
+
+  <section class="col col-results" id="results" aria-labelledby="h-results" tabindex="-1">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 id="h-results" data-i18n="results">Results</h2>
+        <div class="seg" role="group" data-i18n-aria="mode" aria-label="Mode">
+          <button type="button" id="mode-f" aria-pressed="true" data-i18n="modeForward">Underlay → Inner</button>
+          <button type="button" id="mode-r" aria-pressed="false" data-i18n="modeReverse">Inner → Underlay</button>
+        </div>
+      </div>
+      <div class="mtu-row" id="row-underlay">
+        <label for="mtu" class="mtu-label"><span data-i18n="underlayMtu">Underlay MTU</span></label>
+        <div class="mtu-input"><input id="mtu" type="number" inputmode="numeric" min="68" max="65535" step="1" value="1500" aria-describedby="mtu-hint"><span class="unit">B</span></div>
+        <div class="chips" id="mtu-presets" role="group" aria-label="MTU presets"></div>
+        <p class="hint" id="mtu-hint" data-i18n="underlayHint"></p>
+      </div>
+      <div class="mtu-row" id="row-target" hidden>
+        <label for="target" class="mtu-label"><span data-i18n="targetMtu">Desired inner MTU</span></label>
+        <div class="mtu-input"><input id="target" type="number" inputmode="numeric" min="68" max="65535" step="1" value="1500" aria-describedby="target-hint"><span class="unit">B</span></div>
+        <div class="chips" id="target-presets" role="group" aria-label="Inner MTU presets"></div>
+        <p class="hint" id="target-hint" data-i18n="targetHint"></p>
+      </div>
+      <div class="kpis" id="kpis" aria-live="polite"></div>
+      <p class="hint ts-note" id="ts-note" hidden></p>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="warnings">Checks</h2>
+      <ul class="warnings" id="warnings"></ul>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="layout">Byte layout</h2>
+        <span class="legend-enc"><i></i><span data-i18n="encrypted">encrypted</span></span>
+      </div>
+      <h3 class="sub" data-i18n="layoutFrame">Whole frame to scale</h3>
+      <div class="framebar" id="framebar" role="img"></div>
+      <div class="ruler" id="ruler" aria-hidden="true"></div>
+      <h3 class="sub" id="h-bytemap"></h3>
+      <div class="bytemap" id="bytemap" role="list" tabindex="0" aria-labelledby="h-bytemap"></div>
+      <div class="probe">
+        <label for="probe"><span data-i18n="probe">Inner packet size</span>: <output id="probe-out"></output></label>
+        <input type="range" id="probe" min="0" max="1500" step="1" aria-describedby="probe-hint">
+        <button type="button" class="btn small ghost" id="probe-max" data-i18n="probeMax">max</button>
+        <p class="hint" id="probe-hint" data-i18n="probeHint"></p>
+      </div>
+      <details class="fieldtable">
+        <summary data-i18n="showTable">Show fields as table</summary>
+        <div class="table-wrap"><table id="fieldtable"></table></div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="config">Configuration</h2>
+      <p class="hint" data-i18n="configHint"></p>
+      <div class="tabs" role="tablist" id="cfg-tabs" aria-label="Vendor"></div>
+      <div class="cfg" role="tabpanel" id="cfg-panel" tabindex="0">
+        <button type="button" class="btn small copy" id="cfg-copy" data-i18n="copy">Copy</button>
+        <pre><code id="cfg-code"></code></pre>
+      </div>
+      <ul class="cfg-refs" id="cfg-refs"></ul>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="sources">Sources</h2>
+      <p class="hint" data-i18n="sourcesHint"></p>
+      <ul class="sources" id="sources"></ul>
+    </div>
+  </section>
+</main>
+
+<footer class="foot"><span data-i18n="footer">Runs fully offline · no tracking · no cookies · MIT licence</span> · v<span id="ver"></span></footer>
+
+<div class="summary-bar" id="summary-bar" aria-hidden="true"></div>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="live" aria-live="assertive"></div>
+
+<script>
+/*INLINE:calc.js*/
+</script>
+<script>
+/*INLINE:config.js*/
+</script>
+<script>
+/*INLINE:i18n.js*/
+</script>
+<script>
+/*INLINE:app.js*/
+</script>
+</body>
+</html>
